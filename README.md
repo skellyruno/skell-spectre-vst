@@ -1,29 +1,58 @@
-# Skell VST3 Quickstart Template
+# SKELL SPECTRE — Skell VST Template Edition
 
-Reusable JUCE 8 / CMake / GitHub Actions Windows VST3 starter derived from the **build structure** of your uploaded skell-key-vst project. Unlike the TONIC-specific project, this is a generic **gain effect** with a working parameter, GUI knob, preset-state serialization, mono/stereo support, and automated GitHub packaging.
+**SKELL SPECTRE** is an original four-band skeleton-themed texture effect written in C++17/JUCE 8. This version is **ported onto your supplied `skell-vst-template-main(1).zip` build template**, replacing its demo gain effect while retaining its JUCE pin, GitHub Actions packaging conventions, and Skell Audio plugin manufacturer code.
 
-## Fast start
+![Skell vector mark](docs/logo.svg)
 
-1. Create a new GitHub repository and upload the **contents** of this folder (including `.github`).
-2. Open **Actions → Build Windows VST3 → Run workflow**.
-3. After a successful build, download the workflow artifact containing the `.vst3` bundle.
-4. Or run `python tools/new_plugin.py "Skell Compressor" ../skell-compressor --code Sk03` to generate a separate renamed project. Use a **different 4-character plugin code** for every released plugin; the manufacturer code should remain stable for your brand.
+## What was imported from the template
 
-## Local build
+- CMake project layout (`Source/PluginProcessor.*`, `Source/PluginEditor.*`), `JUCE_PATH` override, and JUCE **8.0.12** dependency.
+- `SkAu` manufacturer ID and unique `Spct` four-character product ID, with `audio.skell.spectre` bundle ID to avoid collision with the template's `Sk01` quickstart.
+- The **`.github/workflows/build.yml`** Windows Actions build with automatic `.vst3` ZIP upload.
+- State save/restore through JUCE AudioProcessorValueTreeState, and mono/stereo effect bus layout.
 
-`cmake -S . -B build -A x64 -DJUCE_PATH=C:/JUCE`
+## SKELL SPECTRE features
 
-`cmake --build build --config Release --parallel 2`
+- 4 frequency bands with independent drive, punch, stereo width, and phase dispersion, plus per-band mix/gain/mute/solo.
+- **BASIC** (4 macro controls) / **EXPERT** (full bands and crossover controls) mode.
+- Original vector-drawn reactive skull, lime-green / charcoal styling, analyzer, and resizable interface.
+- 30 original factory presets for bass, leads, drums, vocals, mixes, and effects.
+- Input/output trim, mix, 3 editable crossovers, saturation choices (Tube/Tape/Shred), width choices, safety clip, optional autogain, save/restore of automatable parameters.
+- JUCE-free regression tests and deterministic synthetic DSP benchmark.
 
-Without `JUCE_PATH`, CMake fetches JUCE 8.0.12 from GitHub.
+### Build without installing anything in a DAW
 
-## Where to edit
+Upload the **contents** of this folder to a new GitHub repository (not the outer folder). Open **Actions → Build SKELL SPECTRE Windows VST3 → Run workflow**. When successful, download the `SKELL-SPECTRE-Windows-VST3` artifact and extract its `.vst3` folder.
 
-- `Source/PluginProcessor.cpp`: parameters and DSP (the sample multiplies incoming audio by Gain).
-- `Source/PluginEditor.cpp`: GUI and knob layout.
-- `CMakeLists.txt`: company, unique plugin code, bundle ID, plugin format, name.
-- `.github/workflows/build.yml`: CI compilation and artifact packaging.
+### Windows local build
 
-## Important
+Requirements: Windows, Git, CMake 3.22+, Visual Studio with Desktop development with C++, and internet access for the first JUCE fetch (or JUCE 8.0.12 at a local path).
 
-This is **not** a synthesizer template; it is an audio effect. It does not include TONIC's pitch/key detector or third-party graphical assets. The supplied original ZIP was used to guide project layout and the GitHub workflow. No original TONIC code is bundled. A successful GitHub Actions build has not been verified in this environment.
+```powershell
+.\BUILD-WINDOWS.ps1
+# OR Windows Visual Studio 2026:
+.\BUILD-WINDOWS.ps1 -Generator 'Visual Studio 18 2026'
+# OR use a local JUCE checkout:
+.\BUILD-WINDOWS.ps1 -JucePath 'C:\JUCE'
+```
+
+The VST3 is generated inside `build/SkellSpectre_artefacts/Release/VST3/`; the standalone app is in `build/SkellSpectre_artefacts/Release/Standalone/`. Install the VST3 at `C:\Program Files\Common Files\VST3` or add its build folder to the scan path in your DAW.
+
+### JUCE-free local DSP verification
+
+```bash
+cmake -S . -B build-dsp -DSKELL_BUILD_PLUGIN=OFF -DSKELL_BUILD_TESTS=ON
+cmake --build build-dsp
+ctest --test-dir build-dsp --output-on-failure
+./build-dsp/SkellDSPBenchmark
+```
+
+**Important:** The regression tests exercise the DSP, not JUCE GUI or VST3 hosting. The source port is not proof of a successful Windows plug-in build. Compile on Windows/Actions and test loading, preset/state recall, automation, and mono/stereo routing in your DAW.
+
+### Technical notes
+
+- The four bands sum to dry input at neutral processing settings. Crossovers use nested one-pole cascades with nominal 12/24/36/48 dB/oct slopes, *not* true brickwall isolation.
+- Diffuse is an original all-pass dispersion implementation. Drive HQ is midpoint interpolation rather than true band-limited oversampling. "Limiter" is a sample-peak safety clip, **not** a look-ahead true-peak limiter.
+- Preset controls are set on the UI thread; core DSP processes without heap allocations or locks. Mode, mix, and other important controls are automatable.
+- No code, artwork, preset banks, trademarks, activation system, or proprietary signal-processing algorithms were copied from Phantomic. No affiliation with the original developer.
+- Observe JUCE license obligations when distributing plugin binaries.

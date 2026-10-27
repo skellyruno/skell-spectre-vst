@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="150" viewBox="0 0 500 150">
+<rect width="500" height="150" fill="#090d0e" rx="22"/>
+<path d="M78 22 C43 22 30 52 35 77 L45 91 V107 H108 V90 C137 42 111 22 78 22Z" fill="#dce5ce" stroke="#9bcf62" stroke-width="3"/>
+<ellipse cx="61" cy="70" rx="14" ry="16" fill="#0a1010"/><ellipse cx="95" cy="70" rx="14" ry="16" fill="#0a1010"/>
+<path d="M78 81 L68 97 H88Z" fill="#0a1010"/>
+<path d="M54 108 V119 M67 108 V119 M80 108 V119 M93 108 V119 M106 108 V119" stroke="#b4ff41" stroke-width="3"/>
+<path d="M93 24 L79 51 L89 64 L75 83" stroke="#60745a" stroke-width="4" fill="none"/>
+<text x="155" y="69" font-size="44" font-weight="900" fill="#b4ff41" font-family="Arial, sans-serif">SKELL</text>
+<text x="157" y="109" font-size="29" letter-spacing="5" fill="#dce5ce" font-family="Arial, sans-serif">SPECTRE</text>
+</svg>

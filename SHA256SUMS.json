@@ -1,0 +1,20 @@
+{
+  "name": "SKELL SPECTRE template port",
+  "version": "1.1.0",
+  "source_template": "skell-vst-template-main(1).zip",
+  "files": {
+    ".github/workflows/build.yml": "34384549b15fc31d6e97e6afabe503a5fabd4da372f65db1a8db30f846455fc7",
+    ".gitignore": "604e05abfb94a0c88f2cad6e2f034948564dce7515cb03e7449f9dcc2dc939f4",
+    "BUILD-WINDOWS.ps1": "02b6d64f3bc917f6224923be0a043a377184b3cc68914b62d9956720a8d486da",
+    "CMakeLists.txt": "98d3531b97ec31beea3ecaf0e7f54c1a6d6ef3ececa7936779691bb4cb04124b",
+    "README.md": "ae956787e8bb153a3963933b8544492f18a913ac5596fd6a840295171217af7c",
+    "Source/DSP.h": "c1a876fdcae509ff1e9b995d7ccdbf0283ab8e349536914458babb1788cab5ed",
+    "Source/PluginEditor.cpp": "a27c2016db0a804aeeb4b39f08d76f6fd292051bfb1af78b74342cee157d0c95",
+    "Source/PluginEditor.h": "55bb2a975525d43182426ed7b0d09e2b4fea6de616f13f53471d8d1831022e36",
+    "Source/PluginProcessor.cpp": "0b64da02c1dc8c34f2d8ec8ff190d82b38ec021fe653f662c8c2a5b2292d6114",
+    "Source/PluginProcessor.h": "3b0f761d7539101853790f187f8b47957b3bc99c3688ffc0c557eed79609c037",
+    "docs/logo.svg": "5721ec48cea0888ebeefbb9ba47407e5255e78c0f2f1a6585cb6efae5089ce06",
+    "tests/DSPBenchmark.cpp": "1c57e7e7e6eb644496d6502d7339faaa3c8db1327959dc7fa199010a417ec145",
+    "tests/DSPTests.cpp": "fecd49f055897a2f62c40c0674d9682a02a904c632e0be37031c1495d5612c98"
+  }
+}
