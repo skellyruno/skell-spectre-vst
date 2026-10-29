@@ -1,10 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="150" viewBox="0 0 500 150">
-<rect width="500" height="150" fill="#090d0e" rx="22"/>
-<path d="M78 22 C43 22 30 52 35 77 L45 91 V107 H108 V90 C137 42 111 22 78 22Z" fill="#dce5ce" stroke="#9bcf62" stroke-width="3"/>
-<ellipse cx="61" cy="70" rx="14" ry="16" fill="#0a1010"/><ellipse cx="95" cy="70" rx="14" ry="16" fill="#0a1010"/>
-<path d="M78 81 L68 97 H88Z" fill="#0a1010"/>
-<path d="M54 108 V119 M67 108 V119 M80 108 V119 M93 108 V119 M106 108 V119" stroke="#b4ff41" stroke-width="3"/>
-<path d="M93 24 L79 51 L89 64 L75 83" stroke="#60745a" stroke-width="4" fill="none"/>
-<text x="155" y="69" font-size="44" font-weight="900" fill="#b4ff41" font-family="Arial, sans-serif">SKELL</text>
-<text x="157" y="109" font-size="29" letter-spacing="5" fill="#dce5ce" font-family="Arial, sans-serif">SPECTRE</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="170" viewBox="0 0 540 170">
+  <defs>
+    <linearGradient id="panel" x2="0" y2="1"><stop stop-color="#202031"/><stop offset="1" stop-color="#090911"/></linearGradient>
+    <linearGradient id="bone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7e9d1"/><stop offset="1" stop-color="#aaa9b6"/></linearGradient>
+  </defs>
+  <rect width="540" height="170" rx="15" fill="url(#panel)"/>
+  <rect x="6" y="6" width="528" height="158" rx="12" stroke="#5c456f" fill="none"/>
+  <circle cx="84" cy="82" r="60" fill="#0b0b13" stroke="#ae81ff" stroke-opacity=".65" stroke-width="2"/>
+  <path d="M57 77 C46 40 62 28 85 29 C112 28 122 52 112 79 L106 104 L99 111 V123 H69 V111 L63 104Z" fill="url(#bone)" stroke="#8f8796" stroke-width="2"/>
+  <ellipse cx="69" cy="78" rx="13" ry="15" fill="#11111b"/>
+  <ellipse cx="99" cy="78" rx="13" ry="15" fill="#11111b"/>
+  <ellipse cx="69" cy="79" rx="5" ry="3.5" fill="#b58aff"/>
+  <ellipse cx="99" cy="79" rx="5" ry="3.5" fill="#b58aff"/>
+  <path d="M84 91 L77 104 H91Z" fill="#11111b"/>
+  <path d="M68 113 H101 M73 113 V124 M82 113 V124 M91 113 V124" stroke="#27232e" stroke-width="3"/>
+  <path d="M92 30 L81 55 L90 66 L80 88" stroke="#675c7a" stroke-width="3" fill="none"/>
+  <path d="M84 128 V142 M57 144 L84 130 L111 144" fill="none" stroke="#d3c6bb" stroke-width="5"/>
+  <text x="167" y="85" font-family="Arial, sans-serif" font-size="59" font-weight="800" fill="#e4ddec" letter-spacing="6">SKELL</text>
+  <text x="170" y="129" font-family="Arial, sans-serif" font-size="33" fill="#b58aff" letter-spacing="9">SPECTRE</text>
 </svg>

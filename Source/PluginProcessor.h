@@ -41,7 +41,7 @@ private:
     // Cached APVTS atomics: zero String construction / heap allocation in processBlock.
     struct RawGlobal
     {
-        std::atomic<float> *input{}, *output{}, *mix{}, *basic{}, *limiter{}, *autogain{}, *hq{};
+        std::atomic<float> *input{}, *output{}, *mix{}, *basic{}, *bypass{}, *limiter{}, *autogain{}, *hq{};
         std::atomic<float> *slope{}, *driveType{}, *widthType{};
         std::atomic<float> *drive{}, *punch{}, *stereo{}, *diffuse{};
         std::array<std::atomic<float>*, 3> crossover {};

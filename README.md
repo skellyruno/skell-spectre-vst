@@ -1,58 +1,41 @@
-# SKELL SPECTRE — Skell VST Template Edition
+# SKELL SPECTRE v1.2 — Reactor UI Edition
 
-**SKELL SPECTRE** is an original four-band skeleton-themed texture effect written in C++17/JUCE 8. This version is **ported onto your supplied `skell-vst-template-main(1).zip` build template**, replacing its demo gain effect while retaining its JUCE pin, GitHub Actions packaging conventions, and Skell Audio plugin manufacturer code.
+An original skeleton-themed, four-band texture-shaping VST3 effect based on the supplied **Skell VST JUCE template**. v1.2 redesigns the GUI around the user's 880 × 493 reference: compact horizontal format, purple electromechanical knobs, split modes, and a full-body reactive skeleton in a bespoke laboratory chamber. **The GUI is all JUCE vector graphics, not a borrowed screenshot or a bitmap imitation of the referenced character.**
 
-![Skell vector mark](docs/logo.svg)
+## What changed in v1.2
 
-## What was imported from the template
+- Reworked the default window from 1080 × 740 to **880 × 495** (about 40% smaller in area), with fixed 16:9 aspect ratio and resizable UI down to 704 × 396.
+- Built a tall, original full-body skeletal character with an open purple jacket, ribs, cracked skull, electrical coils, pipes, and a reactor platform. Eye intensity/electric arcs respond to the processed signal.
+- Redesigned four full-size controls (DRIVE, PUNCH, STEREO, DIFFUSE) as metallic dials; values are shown below.
+- Added four independent **ALL/A/B/C/D** selector rails. **ALL** adjusts the global macro in Basic mode, or simultaneously updates all four expert-band values while Expert DSP is enabled. Selecting A–D switches to Expert DSP and edits the chosen band's value for that effect. Returning every selector to ALL restores Basic processing.
+- Split-slope switch is a functional four-position custom graphic selector (**Smooth / Firm / Steep / Brickwall-ish**). The DSP uses 12/24/36/48 dB/oct nominal cascades, *not an ideal brickwall filter*.
+- New **BANDS** button on the right toggles full Expert editor containing independent band controls, crossover frequency sliders and readouts, gain/mix, mute/solo, saturation mode, stereo mode and FFT.
+- Added **automatable BYPASS** controlled by the power icon. When bypassed, audio passes through unchanged.
+- Added session-local **A/B** controls with copy A → B for evaluating settings. A/B slots are not serialized in DAW state; the active parameter state is.
+- Kept presets, HQ, limiter, autogain, mono/stereo, nonblocking DSP and lock-free editor meters.
 
-- CMake project layout (`Source/PluginProcessor.*`, `Source/PluginEditor.*`), `JUCE_PATH` override, and JUCE **8.0.12** dependency.
-- `SkAu` manufacturer ID and unique `Spct` four-character product ID, with `audio.skell.spectre` bundle ID to avoid collision with the template's `Sk01` quickstart.
-- The **`.github/workflows/build.yml`** Windows Actions build with automatic `.vst3` ZIP upload.
-- State save/restore through JUCE AudioProcessorValueTreeState, and mono/stereo effect bus layout.
+## Build — Windows/GitHub Actions
 
-## SKELL SPECTRE features
+The project retains JUCE 8.0.12, the template's `SkAu` manufacturer code and `Spct` plugin code, the GitHub Windows VST3 build workflow, and `BUILD-WINDOWS.ps1`. The ZIP's **root contents** belong at the root of your repository.
 
-- 4 frequency bands with independent drive, punch, stereo width, and phase dispersion, plus per-band mix/gain/mute/solo.
-- **BASIC** (4 macro controls) / **EXPERT** (full bands and crossover controls) mode.
-- Original vector-drawn reactive skull, lime-green / charcoal styling, analyzer, and resizable interface.
-- 30 original factory presets for bass, leads, drums, vocals, mixes, and effects.
-- Input/output trim, mix, 3 editable crossovers, saturation choices (Tube/Tape/Shred), width choices, safety clip, optional autogain, save/restore of automatable parameters.
-- JUCE-free regression tests and deterministic synthetic DSP benchmark.
-
-### Build without installing anything in a DAW
-
-Upload the **contents** of this folder to a new GitHub repository (not the outer folder). Open **Actions → Build SKELL SPECTRE Windows VST3 → Run workflow**. When successful, download the `SKELL-SPECTRE-Windows-VST3` artifact and extract its `.vst3` folder.
-
-### Windows local build
-
-Requirements: Windows, Git, CMake 3.22+, Visual Studio with Desktop development with C++, and internet access for the first JUCE fetch (or JUCE 8.0.12 at a local path).
+Windows command:
 
 ```powershell
-.\BUILD-WINDOWS.ps1
-# OR Windows Visual Studio 2026:
 .\BUILD-WINDOWS.ps1 -Generator 'Visual Studio 18 2026'
-# OR use a local JUCE checkout:
-.\BUILD-WINDOWS.ps1 -JucePath 'C:\JUCE'
 ```
 
-The VST3 is generated inside `build/SkellSpectre_artefacts/Release/VST3/`; the standalone app is in `build/SkellSpectre_artefacts/Release/Standalone/`. Install the VST3 at `C:\Program Files\Common Files\VST3` or add its build folder to the scan path in your DAW.
+Or upload the root source files to GitHub and run **Actions → Build SKELL SPECTRE Windows VST3 → Run workflow**. Download the resulting `SKELL-SPECTRE-Windows-VST3` artifact when the build succeeds.
 
-### JUCE-free local DSP verification
+For an offline DSP-only build on a host with CMake and C++17 (no JUCE required):
 
 ```bash
 cmake -S . -B build-dsp -DSKELL_BUILD_PLUGIN=OFF -DSKELL_BUILD_TESTS=ON
-cmake --build build-dsp
+cmake --build build-dsp --config Release
 ctest --test-dir build-dsp --output-on-failure
-./build-dsp/SkellDSPBenchmark
 ```
 
-**Important:** The regression tests exercise the DSP, not JUCE GUI or VST3 hosting. The source port is not proof of a successful Windows plug-in build. Compile on Windows/Actions and test loading, preset/state recall, automation, and mono/stereo routing in your DAW.
+## Engine and scope
 
-### Technical notes
+Independent four-band Drive, Punch, Stereo, and Diffuse, plus per-band gain, dry/wet blend, and mute/solo; three adjustable crossovers; 30 factory presets; input/output trim; master mix; basic/expert processing. Drive HQ is midpoint interpolation rather than true filtered oversampling. The limiter is a sample-peak safety clip, not look-ahead true-peak limiting. Diffuse is independent all-pass phase dispersion, not the proprietary Phantomic algorithm.
 
-- The four bands sum to dry input at neutral processing settings. Crossovers use nested one-pole cascades with nominal 12/24/36/48 dB/oct slopes, *not* true brickwall isolation.
-- Diffuse is an original all-pass dispersion implementation. Drive HQ is midpoint interpolation rather than true band-limited oversampling. "Limiter" is a sample-peak safety clip, **not** a look-ahead true-peak limiter.
-- Preset controls are set on the UI thread; core DSP processes without heap allocations or locks. Mode, mix, and other important controls are automatable.
-- No code, artwork, preset banks, trademarks, activation system, or proprietary signal-processing algorithms were copied from Phantomic. No affiliation with the original developer.
-- Observe JUCE license obligations when distributing plugin binaries.
+**Validation limits:** DSP-only CMake regression tests run in this environment. A full JUCE Windows plugin build and DAW UI/automation validation must still be carried out on Windows or GitHub Actions. Not affiliated with the referenced plugin developer. Do not distribute binaries without respecting JUCE license requirements.

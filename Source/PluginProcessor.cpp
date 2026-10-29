@@ -73,10 +73,11 @@ Layout SkellSpectreAudioProcessor::createParameterLayout()
     addFloat(layout, "output", "Output dB", -24, 24, 0, .1f);
     addFloat(layout, "mix", "Master Mix", 0, 100, 100, .1f);
     addBool(layout, "basic", "Basic Mode", true);
+    addBool(layout, "bypass", "Bypass", false);
     addBool(layout, "limiter", "Output Limiter", false);
     addBool(layout, "autogain", "Auto Gain", false);
     addBool(layout, "hq", "HQ Drive", false);
-    addChoice(layout, "slope", "Split Slope", { "Smooth 12", "Firm 24", "Steep 36", "Brickwall-ish 48" }, 1);
+    addChoice(layout, "slope", "Split Slope", { "Smooth 12", "Firm 24", "Steep 36", "Brickwall-ish 48" }, 3);
     addChoice(layout, "driveType", "Drive Character", { "Tube", "Tape", "Shred" });
     addChoice(layout, "widthType", "Stereo Character", { "Mid Side", "Spread", "Haas" });
     addFloat(layout, "drive", "Global Drive", 0, 100, 0, .1f);
@@ -109,7 +110,7 @@ SkellSpectreAudioProcessor::SkellSpectreAudioProcessor()
 {
     const auto ptr = [this](const juce::String& id) { return parameters.getRawParameterValue(id); };
     raw.input=ptr("input"); raw.output=ptr("output"); raw.mix=ptr("mix");
-    raw.basic=ptr("basic"); raw.limiter=ptr("limiter"); raw.autogain=ptr("autogain"); raw.hq=ptr("hq");
+    raw.basic=ptr("basic"); raw.bypass=ptr("bypass"); raw.limiter=ptr("limiter"); raw.autogain=ptr("autogain"); raw.hq=ptr("hq");
     raw.slope=ptr("slope"); raw.driveType=ptr("driveType"); raw.widthType=ptr("widthType");
     raw.drive=ptr("drive"); raw.punch=ptr("punch"); raw.stereo=ptr("stereo"); raw.diffuse=ptr("diffuse");
     for (int i=0; i<3; ++i) raw.crossover[i]=ptr("cross"+juce::String(i+1));
@@ -193,7 +194,7 @@ void SkellSpectreAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     for (int i = 0; i < n; ++i)
         scopeInput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
             .store(ptrs[0][i], std::memory_order_relaxed);
-    engine.process(ptrs, activeChannels, n, s);
+    if (get(raw.bypass) < 0.5f) engine.process(ptrs, activeChannels, n, s);
     for (int i = 0; i < n; ++i)
         scopeOutput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
             .store(ptrs[0][i], std::memory_order_relaxed);
