@@ -292,7 +292,7 @@ void SkullDisplay::paint(juce::Graphics& g)
     {
         const float x=154.0f+i*45.0f;
         g.setColour(juce::Colour::fromRGB(114,94,91));
-        g.fillRect(x,0,5,23+i*3);
+        g.fillRect(x, 0.0f, 5.0f, 23.0f + static_cast<float>(i) * 3.0f);
         g.setColour(violet.withAlpha(.4f));
         g.drawLine(x-2,22,x+7,22,1);
     }

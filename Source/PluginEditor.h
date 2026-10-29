@@ -43,7 +43,7 @@ private:
 };
 
 // On-screen band picker: sigma means all bands; A-D address four independent bands.
-class BandRail final : public juce::Component
+class BandRail final : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     std::function<void(int)> onSelect;

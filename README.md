@@ -1,6 +1,13 @@
-# SKELL SPECTRE v1.2 — Reactor UI Edition
+# SKELL SPECTRE v1.2.1 — Reactor UI Build Fix
 
 An original skeleton-themed, four-band texture-shaping VST3 effect based on the supplied **Skell VST JUCE template**. v1.2 redesigns the GUI around the user's 880 × 493 reference: compact horizontal format, purple electromechanical knobs, split modes, and a full-body reactive skeleton in a bespoke laboratory chamber. **The GUI is all JUCE vector graphics, not a borrowed screenshot or a bitmap imitation of the referenced character.**
+
+## v1.2.1 — MSVC / JUCE 8 build fixes
+
+- Corrected `Graphics::fillRect` arguments in `Source/PluginEditor.cpp` near line 295 to explicitly select the float overload (resolves MSVC C2666).
+- Made `BandRail` inherit from `juce::SettableTooltipClient`, enabling its tooltip text without requiring an unavailable `Component::setTooltip` member (resolves MSVC C2039).
+- Preserved v1.2 UI, parameters, DSP, factory presets, and GitHub Actions build system.
+- **Validation:** JUCE-free DSP regression tests run locally; a Windows JUCE VST3 build still needs confirmation in GitHub Actions or Visual Studio.
 
 ## What changed in v1.2
 
