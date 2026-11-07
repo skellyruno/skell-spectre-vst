@@ -189,12 +189,14 @@ void BandRail::paint(juce::Graphics& g)
     {
         const float y=(i+.5f)*step;
         if (i == selection)
-    {
-        g.setColour(violet.withAlpha(.13f));
-        g.fillRoundedRectangle(0.0f, y - step * .40f,
-                               static_cast<float>(getWidth()), step * .80f, 4.0f);
-    }
-    g.setColour(i==selection ? violet : subtle.withAlpha(.8f));
+        {
+            g.setColour(violet.withAlpha(.20f));
+            g.fillRoundedRectangle(0.0f, y - step * .40f,
+                                   static_cast<float>(getWidth()), step * .80f, 4.0f);
+            g.setColour(violet.withAlpha(.8f));
+            g.fillRoundedRectangle(0.0f, y - step * .40f, 2.0f, step * .80f, 1.0f);
+        }
+        g.setColour(i==selection ? violet : subtle.withAlpha(.8f));
         g.drawEllipse(1,y-4.1f,8.2f,8.2f,1.15f);
         if (i==selection) g.fillEllipse(2.7f,y-2.4f,4.8f,4.8f);
         text(g, labels[i],12,y-7,getWidth()-12.0f,14,9.1f,
@@ -476,9 +478,9 @@ void SkullDisplay::paint(juce::Graphics& g)
 
 SpectrumDisplay::SpectrumDisplay(SkellSpectreAudioProcessor& p) : processor(p)
 {
-    for (int i=0;i<1024;++i)
-        window[static_cast<size_t>(i)] = .5f - .5f*std::cos(
-            2.0f*skell::kPi*static_cast<float>(i)/1023.0f);
+    for (int i = 0; i < fftSize; ++i)
+        window[static_cast<size_t>(i)] = .5f - .5f * std::cos(
+            2.0f * skell::kPi * static_cast<float>(i) / static_cast<float>(fftSize - 1));
     setInterceptsMouseClicks(false, false);
     startTimerHz(20);
 }
@@ -491,18 +493,19 @@ void SpectrumDisplay::timerCallback()
     {
         fftData.fill(0.0f);
         const auto& scope = stage == 0 ? processor.scopeInput : processor.scopeOutput;
-        for (int i = 0; i < 1024; ++i)
+        for (int i = 0; i < fftSize; ++i)
         {
-            const auto index = (end - 1024u + static_cast<unsigned int>(i)) % 1024u;
+            const auto index = (end - static_cast<unsigned int>(fftSize)
+                + static_cast<unsigned int>(i)) % static_cast<unsigned int>(fftSize);
             const float wave = scope[index].load(std::memory_order_relaxed);
             // Hann window
             fftData[i] = wave * window[static_cast<size_t>(i)];
         }
         fft.performFrequencyOnlyForwardTransform(fftData.data());
         auto& dest = stage == 0 ? magsInput : magsOutput;
-        for (int k=0; k<512; ++k)
+        for (int k = 0; k < fftSize / 2; ++k)
         {
-            const float magnitude = fftData[k] / 256.0f;
+            const float magnitude = fftData[k] / (static_cast<float>(fftSize) * .25f);
             const float level = juce::jlimit(0.0f,1.0f,(20.0f*std::log10(magnitude+0.00001f)+82.0f)/82.0f);
             dest[k] = .72f*dest[k] + .28f*level;
         }
@@ -525,15 +528,15 @@ void SpectrumDisplay::paint(juce::Graphics& g)
                  x+2,r.getBottom()-14,42,13,9.5f,subtle);
     }
     for (int t=1;t<4;++t) g.drawHorizontalLine(static_cast<int>(r.getY()+t*r.getHeight()/4),r.getX(),r.getRight());
-    auto draw = [&](const std::array<float,512>& mags, juce::Colour colour)
+    auto draw = [&](const std::array<float, fftSize / 2>& mags, juce::Colour colour)
     {
         juce::Path p;
         bool first = true;
         for (int pixel=0; pixel<=static_cast<int>(r.getWidth()); pixel+=2)
         {
             const float f = 20.0f*std::pow(1000.0f,static_cast<float>(pixel)/r.getWidth());
-            const float bin = juce::jlimit(1.0f, 510.999f,
-                static_cast<float>(f * 1024.0 / rate));
+            const float bin = juce::jlimit(1.0f, static_cast<float>(fftSize / 2 - 2),
+                static_cast<float>(f * fftSize / rate));
             const int index = static_cast<int>(bin);
             const float level = mags[static_cast<size_t>(index)] +
                 (bin - static_cast<float>(index)) *
@@ -546,6 +549,8 @@ void SpectrumDisplay::paint(juce::Graphics& g)
     };
     draw(magsInput, subtle);
     draw(magsOutput, violet);
+    text(g, "4096 FFT", r.getX() + 7.0f, r.getY() + 4.0f, 74.0f, 13.0f,
+         8.4f, subtle.withAlpha(.85f));
     const float labelY = r.getY() + 4.0f;
     g.setColour(subtle);
     g.fillEllipse(r.getRight()-98.0f, labelY+4.0f, 6.0f, 6.0f);
@@ -564,7 +569,12 @@ SkellSpectreAudioProcessorEditor::Control* SkellSpectreAudioProcessorEditor::add
     c->linear=linear;
     c->slider->setSliderStyle(linear ? juce::Slider::LinearHorizontal
                                      : juce::Slider::RotaryHorizontalVerticalDrag);
-    c->slider->setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
+    // The four Reactor macro readouts are editable: click the number to type
+    // an exact value. Compact Expert controls keep popups to save space.
+    c->slider->setTextBoxStyle(!linear && !attach ? juce::Slider::TextBoxBelow
+                                                  : juce::Slider::NoTextBox,
+                               false, !linear && !attach ? 64 : 0,
+                               !linear && !attach ? 16 : 0);
     c->slider->setRotaryParameters(juce::degreesToRadians(225.0f),
                                    juce::degreesToRadians(495.0f),true);
     double def=0.0;
@@ -576,7 +586,9 @@ SkellSpectreAudioProcessorEditor::Control* SkellSpectreAudioProcessorEditor::add
     c->name->setText(caption,juce::dontSendNotification);
     c->name->setJustificationType(juce::Justification::centred);
     c->name->setColour(juce::Label::textColourId,bone);
-    c->slider->setTooltip(caption+" — drag or scroll to adjust; double-click resets");
+    c->slider->setTooltip(caption + (!linear && !attach
+        ? " — drag to adjust, click the value for precise entry, double-click the knob to reset"
+        : " — drag or scroll to adjust; double-click resets"));
     c->slider->setPopupDisplayEnabled(true, true, this);
     c->slider->onDragEnd=[this]
     {
@@ -630,6 +642,7 @@ void SkellSpectreAudioProcessorEditor::bindMacro(int k,int band)
 SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreAudioProcessor& p)
     : juce::AudioProcessorEditor(&p),processor(p),skull(p),spectrum(p)
 {
+    processor.setVisualizationActive(true);
     setLookAndFeel(&look);
     setOpaque(true);
     addAndMakeVisible(skull);
@@ -751,6 +764,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
 SkellSpectreAudioProcessorEditor::~SkellSpectreAudioProcessorEditor()
 {
     stopTimer();
+    processor.setVisualizationActive(false);
     for (auto& attachment:macroAttachments) attachment.reset();
     comboAttachments.clear();
     buttonAttachments.clear();
@@ -905,17 +919,8 @@ void SkellSpectreAudioProcessorEditor::timerCallback()
     repaint(scaled(806, 60, 58, 480, uiScale));
     if (!showingExpert)
     {
-        for (int k = 0; k < 4; ++k)
-        {
-            const float value = static_cast<float>(macro[k]->slider->getValue());
-            if (std::abs(value - shownMacroValues[k]) > 0.04f)
-            {
-                shownMacroValues[k] = value;
-                const float x = (k % 2 == 0 ? 133.0f : 287.0f);
-                const float y = (k < 2 ? 236.0f : 405.0f);
-                repaint(scaled(x-37.0f, y+86.0f, 74.0f, 21.0f, uiScale));
-            }
-        }
+        // JUCE refreshes the editable macro text boxes when values change;
+        // no editor-wide repaint is needed for their numeric values.
     }
     else
     {
@@ -945,7 +950,7 @@ void SkellSpectreAudioProcessorEditor::place(Control* c,float x,float y,float w,
     }
     else
     {
-        c->slider->setBounds(scaled(x,y,w,h-21,uiScale));
+        c->slider->setBounds(scaled(x,y,w,h-23,uiScale));
         c->name->setBounds(scaled(x,y+h-23,w,21,uiScale));
         c->name->setFont(juce::Font(juce::FontOptions(std::max(8.0f,10.2f*uiScale),juce::Font::bold)));
     }
@@ -1086,9 +1091,7 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
                 const float a=j*juce::MathConstants<float>::halfPi+.48f;
                 g.fillEllipse(x+55*std::sin(a)-2,y+55*std::cos(a)-2,4,4);
             }
-            const float v=static_cast<float>(macro[k]->slider->getValue());
-            text(g,juce::String(v,1),x-34,y+88,68,17,9.3f,subtle,
-                 juce::Justification::centred);
+            // Editable numeric values are owned by each JUCE slider below.
         }
         text(g,"BAND SELECT  //  ALL  A  B  C  D",45,520,342,15,8.5f,subtle);
         g.setColour(violet.withAlpha(.15f));g.drawHorizontalLine(530,11,395);
@@ -1167,6 +1170,6 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
          juce::Justification::centred);
     text(g,"8 SMP / FIXED",870,471,86,13,8.3f,signal.withAlpha(.85f),juce::Justification::centred);
     text(g,"AUDIO REACTIVE",870,486,86,13,8.3f,subtle,juce::Justification::centred);
-    text(g,"SKELL AUDIO  1.6",866,515,94,17,8.3f,subtle,
+    text(g,"SKELL AUDIO  1.7",866,515,94,17,8.3f,subtle,
          juce::Justification::centred);
 }

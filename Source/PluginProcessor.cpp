@@ -199,33 +199,46 @@ void SkellSpectreAudioProcessor::processInternal(juce::AudioBuffer<float>& buffe
         p.mute = !s.basic && get(r.mute) > 0.5f;
         p.solo = !s.basic && get(r.solo) > 0.5f;
     }
-    float before = 0.0f;
-    for (int c = 0; c < activeChannels; ++c) before = std::max(before, buffer.getMagnitude(c, 0, n));
     float* ptrs[2] = { buffer.getWritePointer(0), activeChannels > 1 ? buffer.getWritePointer(1) : nullptr };
-    // Store a small, lock-free waveform snapshot for the editor FFT; no heap work.
-    const auto writeStart = scopeWrite.load(std::memory_order_relaxed);
-    for (int i = 0; i < n; ++i)
+    const bool visualizationActive = visualizationReaders.load(std::memory_order_relaxed) != 0;
+    float before = 0.0f;
+    unsigned int writeStart = 0;
+    if (visualizationActive)
     {
-        // Keep malformed host input from poisoning the editor FFT, which
-        // otherwise can generate NaN drawing coordinates and invalid meters.
-        const float sample = ptrs[0][i];
-        scopeInput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
-            .store(std::isfinite(sample) ? juce::jlimit(-64.0f, 64.0f, sample) : 0.0f,
-                std::memory_order_relaxed);
+        for (int c = 0; c < activeChannels; ++c)
+            before = std::max(before, buffer.getMagnitude(c, 0, n));
+        writeStart = scopeWrite.load(std::memory_order_relaxed);
+        // Store the input for the editor FFT with no allocation or lock.
+        for (int i = 0; i < n; ++i)
+        {
+            const float sample = ptrs[0][i];
+            scopeInput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
+                .store(std::isfinite(sample) ? juce::jlimit(-64.0f, 64.0f, sample) : 0.0f,
+                       std::memory_order_relaxed);
+        }
     }
-    // Bypass is crossfaded inside the engine; the host always sees fixed latency.
+    // Process exactly the same DSP whether the editor is open or closed.
     engine.process(ptrs, activeChannels, n, s);
-    for (int i = 0; i < n; ++i)
-        scopeOutput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
-            .store(ptrs[0][i], std::memory_order_relaxed);
-    scopeWrite.store(writeStart + static_cast<unsigned int>(n), std::memory_order_release);
-    float after = 0.0f;
-    for (int c = 0; c < activeChannels; ++c) after = std::max(after, buffer.getMagnitude(c, 0, n));
-    // Meter release is time-based rather than host block-size-based.
-    const auto sr = std::max(8000.0, getSampleRate());
-    const float decay = std::exp(-static_cast<float>(n) / static_cast<float>(sr * 0.20));
-    inputPeak.store(std::max(before, inputPeak.load(std::memory_order_relaxed) * decay), std::memory_order_relaxed);
-    outputPeak.store(std::max(after, outputPeak.load(std::memory_order_relaxed) * decay), std::memory_order_relaxed);
+    if (visualizationActive)
+    {
+        for (int i = 0; i < n; ++i)
+        {
+            const float sample = ptrs[0][i];
+            scopeOutput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
+                .store(std::isfinite(sample) ? sample : 0.0f, std::memory_order_relaxed);
+        }
+        scopeWrite.store(writeStart + static_cast<unsigned int>(n), std::memory_order_release);
+        float after = 0.0f;
+        for (int c = 0; c < activeChannels; ++c)
+            after = std::max(after, buffer.getMagnitude(c, 0, n));
+        // Meter release is time-based rather than host block-size-based.
+        const auto sr = std::max(8000.0, getSampleRate());
+        const float decay = std::exp(-static_cast<float>(n) / static_cast<float>(sr * 0.20));
+        inputPeak.store(std::max(before, inputPeak.load(std::memory_order_relaxed) * decay),
+                        std::memory_order_relaxed);
+        outputPeak.store(std::max(after, outputPeak.load(std::memory_order_relaxed) * decay),
+                         std::memory_order_relaxed);
+    }
 }
 
 const juce::StringArray& SkellSpectreAudioProcessor::presetNames()

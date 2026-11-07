@@ -87,6 +87,8 @@ public:
         delayIndex = 0;
         rmsIn = rmsOut = 0.001f;
         autoGainSmoothed = 1.0f;
+        autoGainTarget = 1.0f;
+        autoGainCountdown = 0;
         initialized = false;
     }
 
@@ -331,8 +333,25 @@ public:
             outEnergy /= static_cast<float>(numChannels);
             rmsIn += rmsCoeff * (inEnergy - rmsIn);
             rmsOut += rmsCoeff * (outEnergy - rmsOut);
-            const float ag = settings.autoGain ? clampf(std::sqrt((rmsIn + .0001f) / (rmsOut + .0001f)), .35f, 2.82f) : 1.0f;
-            autoGainSmoothed += rmsCoeff * (ag - autoGainSmoothed);
+            // 350 ms RMS envelopes cannot perceptibly change over 16 samples,
+            // so recompute the expensive square-root target at ~3 kHz rather
+            // than once per audio sample. A persistent countdown guarantees
+            // identical behaviour across arbitrary host buffer partitions.
+            if (settings.autoGain)
+            {
+                if (autoGainCountdown == 0)
+                {
+                    autoGainTarget = clampf(std::sqrt((rmsIn + .0001f) / (rmsOut + .0001f)), .35f, 2.82f);
+                    autoGainCountdown = 16;
+                }
+                --autoGainCountdown;
+            }
+            else
+            {
+                autoGainTarget = 1.0f;
+                autoGainCountdown = 0;
+            }
+            autoGainSmoothed += rmsCoeff * (autoGainTarget - autoGainSmoothed);
             float preLimit[2] = {};
             float maxPeak = 0.0f;
             for (int c = 0; c < numChannels; ++c)
@@ -411,6 +430,8 @@ private:
     float smoothedSlope = 3.0f, smoothedDriveType = 0.0f, smoothedWidthType = 0.0f;
     int delaySamples = 288, delayIndex = 0;
     float rmsIn = .001f, rmsOut = .001f, autoGainSmoothed = 1.0f;
+    float autoGainTarget = 1.0f;
+    int autoGainCountdown = 0;
     bool initialized = false;
 };
 }

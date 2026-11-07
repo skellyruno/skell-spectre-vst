@@ -29,9 +29,17 @@ public:
 
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float> inputPeak { 0.0f }, outputPeak { 0.0f };
-    static constexpr int spectrumSize = 1024;
+    // 4096-point FFT resolves the first 20-40 Hz bins accurately at 48 kHz.
+    static constexpr int spectrumSize = 4096;
     std::array<std::atomic<float>, spectrumSize> scopeInput {}, scopeOutput {};
     std::atomic<unsigned int> scopeWrite { 0 };
+    // Audio-thread visualization work is skipped when no editor is open.
+    // Reference-counted to tolerate hosts with more than one editor instance.
+    void setVisualizationActive(bool active) noexcept
+    {
+        if (active) visualizationReaders.fetch_add(1u, std::memory_order_relaxed);
+        else visualizationReaders.fetch_sub(1u, std::memory_order_relaxed);
+    }
     float parameter(const juce::String& id) const noexcept;
     void loadPreset(int index);
     static const juce::StringArray& presetNames();
@@ -54,5 +62,6 @@ private:
     };
     std::array<RawBand, 4> rawBands {};
     skell::Engine engine;
+    std::atomic<unsigned int> visualizationReaders { 0 };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkellSpectreAudioProcessor)
 };

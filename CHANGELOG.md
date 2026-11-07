@@ -1,5 +1,14 @@
 # Change log — SKELL SPECTRE
 
+## v1.7.0 — 2026-11-07
+
+- Reduce Auto Gain square-root target updates to once per 16 audio samples; keep the 350 ms RMS smoothing and block-partition consistency.
+- Suppress analyzer snapshot and meter work when no plugin editor is open.
+- Increase audio spectrum resolution to 4,096 samples, with correctly scaled Hann normalization and bin interpolation.
+- Make the four main Reactor knobs numerically editable while retaining right-click/drag, automation, and default-reset behavior.
+- Clarify selected band in the rail, label FFT size, and update displayed version.
+- Expand DSP tests for variable buffer sizes and Auto Gain toggling without adding parameters or changing reported latency.
+
 ## v1.6.0 — 2026-11-07
 
 - Smooth width processing mode switching between continuously warmed M/S, Spread, and Haas paths.

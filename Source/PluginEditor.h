@@ -37,10 +37,11 @@ public:
 private:
     void timerCallback() override;
     SkellSpectreAudioProcessor& processor;
-    juce::dsp::FFT fft { 10 };
-    std::array<float, 2048> fftData {};
-    std::array<float, 1024> window {};
-    std::array<float, 512> magsInput {}, magsOutput {};
+    static constexpr int fftSize = SkellSpectreAudioProcessor::spectrumSize;
+    juce::dsp::FFT fft { 12 };
+    std::array<float, fftSize * 2> fftData {};
+    std::array<float, fftSize> window {};
+    std::array<float, fftSize / 2> magsInput {}, magsOutput {};
 };
 
 // On-screen band picker: sigma means all bands; A-D address four independent bands.
@@ -132,6 +133,5 @@ private:
     int currentAB = 0;
     bool showingExpert = false, previousBasic = true, rebindingMacro = false;
     float uiScale = 1.0f;
-    std::array<float, 4> shownMacroValues {{ -999.0f, -999.0f, -999.0f, -999.0f }};
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkellSpectreAudioProcessorEditor)
 };

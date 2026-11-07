@@ -1,6 +1,6 @@
 # SKELL SPECTRE — shipping checklist
 
-The v1.6 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
+The v1.7 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
 
 ## Must-pass build and host checks
 
@@ -22,6 +22,14 @@ The v1.6 source is a development candidate, **not a verified commercial-ready re
 - [ ] Accessibility review (full focus traversal, UI contrast, accessible control descriptions).
 - [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
+
+## v1.7 completed checks
+
+- [x] Auto Gain computation reduced to a 16-sample update cadence, with sample-continuous target smoothing and a buffer-consistency regression test.
+- [x] Audio-thread analyzer/GUI meter work disabled whenever no editor is attached.
+- [x] FFT expanded to 4,096 bins with a readable legend; main knobs support typed numerical entry.
+- [ ] FL Studio stress test 20+ editor-open and editor-closed instances; compare CPU with v1.6.
+- [ ] Verify the JUCE 8 / Windows VST3 build and in-host UI alignment at minimum and maximum sizes.
 
 ## v1.5–v1.6 completed checks
 

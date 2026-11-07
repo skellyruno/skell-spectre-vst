@@ -1,10 +1,21 @@
-# SKELL SPECTRE v1.6 — Reactor Pro
+# SKELL SPECTRE v1.7 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-## New in v1.6 (November 7, 2026)
+## New in v1.7 (November 7, 2026)
+
+- **Lower Audio Thread overhead:** Auto Gain RMS ratios are recomputed once every 16 samples instead of every sample, with continuous 350 ms level smoothing. The phase of the update is persistent across host audio blocks, so output stays block-size-independent.
+- **Zero FFT/peak-capture work while the editor is closed:** the processor reference-counts active editor visualizations. When there are none, it processes identical audio without FFT ring-buffer writes, magnitude scans, or UI-meter updates. This helps sessions with many plugin instances.
+- **Sharper low-end spectrum:** 4,096-point FFT (previously 1,024), updated ring buffer and Hann-window calibration. At 48 kHz, bin resolution improves from ~46.9 Hz to ~11.7 Hz. The analyzer runs only in the visible Expert view.
+- **Precise knob editing:** the four main Reactor macro knobs now display editable numeric boxes; click a number to type a value or double-click the knob to reset. Expert controls keep their compact popup values.
+- **Cleaner selection affordances:** improved ALL/A/B/C/D rail contrast, an active selection stripe, explicit spectrum-size label, and preserved keyboard focus.
+- **Added regression test:** Auto Gain under variable host block sizes with fast mode toggles. Normal, strict-warning and sanitizer tests are required before the Windows VST3 build.
+
+The plugin ID (`SkAu` / `Spct`), all parameter identifiers, 30 factory presets and the fixed eight-sample delay are unchanged. The limiter remains a sample-peak limiter; no true-peak certification is claimed.
+
+## Previously added in v1.6 (November 7, 2026)
 
 - **Click-reduced stereo type automation:** Mid/Side, Spread, and Haas no longer switch abruptly. The DSP maintains the spread filter and Haas delay continuously, morphing between their outputs over approximately 10 ms. This also avoids unwarmed delay lines on mode activation.
 - **Diffuse engagement protection:** the 12-stage independently designed phase-rotation network now fades into the wet path over a short (~4.5 ms time constant) warm-up window, reducing the first-sample phase pop after an idle period while retaining CPU savings when fully inactive.

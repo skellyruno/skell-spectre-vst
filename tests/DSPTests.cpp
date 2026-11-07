@@ -163,6 +163,60 @@ int main()
         SKELL_CHECK(maxDiff < 0.000005f);
     }
 
+    // Auto-gain target is evaluated every 16 samples. This must not make
+    // results depend on the host buffer size or automation block boundaries.
+    {
+        skell::Engine continuous, fragmented;
+        continuous.prepare(96000.0);
+        fragmented.prepare(96000.0);
+        skell::Settings ag;
+        ag.autoGain = true;
+        ag.hq = true;
+        ag.limiter = false;
+        for (auto& band : ag.bands)
+        {
+            band.drive = 73.0f;
+            band.punch = 30.0f;
+            band.mix = 95.0f;
+        }
+        std::vector<float> leftA(8192), rightA(8192);
+        std::vector<float> leftB(8192), rightB(8192);
+        for (int i = 0; i < 8192; ++i)
+        {
+            const float amplitude = (i > 2700 && i < 5900) ? .85f : .12f;
+            leftA[i] = leftB[i] = amplitude * std::sin(.074f * static_cast<float>(i));
+            rightA[i] = rightB[i] = amplitude * std::cos(.086f * static_cast<float>(i));
+        }
+        float* all[] = { leftA.data(), rightA.data() };
+        continuous.process(all, 2, 8192, ag);
+        for (int offset = 0; offset < 8192;)
+        {
+            const int count = std::min(8192 - offset, 1 + ((offset * 17) % 233));
+            float* part[] = { leftB.data() + offset, rightB.data() + offset };
+            fragmented.process(part, 2, count, ag);
+            offset += count;
+        }
+        float err = 0.0f;
+        for (int i = 0; i < 8192; ++i)
+        {
+            SKELL_CHECK(std::isfinite(leftA[i]) && std::isfinite(rightA[i]));
+            err = std::max(err, std::abs(leftA[i] - leftB[i]));
+            err = std::max(err, std::abs(rightA[i] - rightB[i]));
+        }
+        std::cout << "Auto Gain / variable-block consistency: " << err << '\n';
+        SKELL_CHECK(err < .000005f);
+        // Repeated transitions may never contaminate persistent RMS memory.
+        for (int n = 0; n < 256; ++n)
+        {
+            ag.autoGain = (n % 3 != 0);
+            ag.bands[2].drive = (n % 2 == 0) ? 99.0f : 1.0f;
+            float sample = .6f * std::sin(.31f * n);
+            float* c[] = { &sample };
+            continuous.process(c, 1, 1, ag);
+            SKELL_CHECK(std::isfinite(sample));
+        }
+    }
+
     // Synthetic nonlinear spectral test (7 kHz sine at 48 kHz): the 5th
     // harmonic folds to 13 kHz without oversampling. HQ must suppress it.
     {
