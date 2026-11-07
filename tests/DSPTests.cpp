@@ -183,8 +183,13 @@ int main()
             {
                 std::complex<double> total{};
                 for (int i=begin;i<count;++i)
-                    total += std::polar(static_cast<double>(audio[i]),
-                        -2.0*static_cast<double>(skell::kPi)*hz*i/48000.0);
+                {
+                    // std::polar(radius, phase) requires radius >= 0 (Clang 21
+                    // and libstdc++ assert on negative audio samples).
+                    const double angle = -2.0 * static_cast<double>(skell::kPi) * hz * i / 48000.0;
+                    total += static_cast<double>(audio[i]) *
+                        std::complex<double>(std::cos(angle), std::sin(angle));
+                }
                 return 2.0*std::abs(total)/(count-begin);
             };
             return measure(13000.0)/std::max(1e-8,measure(7000.0));

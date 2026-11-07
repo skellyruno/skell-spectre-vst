@@ -1,7 +1,7 @@
 {
   "release": "1.5.0",
   "sha256": {
-    ".github/workflows/build.yml": "502f97c6e16f0606f865b3daa17a33bfb84fb36a4696d0b5a34aec8ea0e96a0c",
+    ".github/workflows/build.yml": "a33f9c90e5059b51c0d1ce69d41e13f6450101366d1de0c1e1150f297039e04e",
     ".gitignore": "604e05abfb94a0c88f2cad6e2f034948564dce7515cb03e7449f9dcc2dc939f4",
     "BUILD-FIXES.md": "ac444e5e9fcb5ffb8c2afb9c8f452494374de13fca51523a7a0a6d6bd9a221aa",
     "BUILD-WINDOWS.ps1": "02b6d64f3bc917f6224923be0a043a377184b3cc68914b62d9956720a8d486da",
@@ -17,6 +17,6 @@
     "Source/PluginProcessor.h": "145a670735e386bccd9ee08f7730daa31113eb34ecc1b7374eaa07aef1b0508e",
     "docs/logo.svg": "4cb8cc78e92d8ae34f8aa4164f3444720b8eaacab908bce8114813554e03fcc9",
     "tests/DSPBenchmark.cpp": "1c57e7e7e6eb644496d6502d7339faaa3c8db1327959dc7fa199010a417ec145",
-    "tests/DSPTests.cpp": "66fac1c55f2e581011734d850731dfa092eb5b5dd9a9e8321c3f10e28c82668f"
+    "tests/DSPTests.cpp": "d9dc24535bd82e97d73a9a33033ebe7aa223380ff6cbd59566b8746f1632a8a4"
   }
 }
