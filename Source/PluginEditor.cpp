@@ -178,12 +178,23 @@ juce::Font SkellLookAndFeel::getComboBoxFont(juce::ComboBox&)
 
 void BandRail::paint(juce::Graphics& g)
 {
+    if (hasKeyboardFocus(true))
+    {
+        g.setColour(violet.withAlpha(.52f));
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.6f), 4.0f, 1.0f);
+    }
     const auto step=getHeight()/5.0f;
     const char* labels[5]={"ALL","A","B","C","D"};
     for (int i=0;i<5;++i)
     {
         const float y=(i+.5f)*step;
-        g.setColour(i==selection ? violet : subtle.withAlpha(.8f));
+        if (i == selection)
+    {
+        g.setColour(violet.withAlpha(.13f));
+        g.fillRoundedRectangle(0.0f, y - step * .40f,
+                               static_cast<float>(getWidth()), step * .80f, 4.0f);
+    }
+    g.setColour(i==selection ? violet : subtle.withAlpha(.8f));
         g.drawEllipse(1,y-4.1f,8.2f,8.2f,1.15f);
         if (i==selection) g.fillEllipse(2.7f,y-2.4f,4.8f,4.8f);
         text(g, labels[i],12,y-7,getWidth()-12.0f,14,9.1f,
@@ -211,6 +222,11 @@ bool BandRail::keyPressed(const juce::KeyPress& key)
 void SplitStrip::paint(juce::Graphics& g)
 {
     const float cell=getWidth()/4.0f;
+    if (hasKeyboardFocus(true))
+    {
+        g.setColour(violet.withAlpha(.5f));
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.0f), 8.0f, 1.0f);
+    }
     frame(g,{0,0,static_cast<float>(getWidth()),static_cast<float>(getHeight()-19)},9);
     const char* modes[]={"SMOOTH","FIRM","STEEP","BRICKWALL"};
     for (int i=0;i<4;++i)
@@ -257,7 +273,8 @@ bool SplitStrip::keyPressed(const juce::KeyPress& key)
 SkullDisplay::SkullDisplay(SkellSpectreAudioProcessor& p) : processor(p)
 {
     setInterceptsMouseClicks(false,false);
-    startTimerHz(30);
+    // Animation rate is intentionally capped; no full-editor repaint is needed.
+    startTimerHz(24);
 }
 
 void SkullDisplay::paint(juce::Graphics& g)
@@ -515,8 +532,12 @@ void SpectrumDisplay::paint(juce::Graphics& g)
         for (int pixel=0; pixel<=static_cast<int>(r.getWidth()); pixel+=2)
         {
             const float f = 20.0f*std::pow(1000.0f,static_cast<float>(pixel)/r.getWidth());
-            const int bin = juce::jlimit(1,511,static_cast<int>(f*1024.0/rate));
-            const float level = mags[bin];
+            const float bin = juce::jlimit(1.0f, 510.999f,
+                static_cast<float>(f * 1024.0 / rate));
+            const int index = static_cast<int>(bin);
+            const float level = mags[static_cast<size_t>(index)] +
+                (bin - static_cast<float>(index)) *
+                (mags[static_cast<size_t>(index+1)] - mags[static_cast<size_t>(index)]);
             const float x = r.getX()+pixel, y = r.getBottom()-level*r.getHeight();
             if (first) {p.startNewSubPath(x,y); first=false;} else p.lineTo(x,y);
         }
@@ -525,6 +546,13 @@ void SpectrumDisplay::paint(juce::Graphics& g)
     };
     draw(magsInput, subtle);
     draw(magsOutput, violet);
+    const float labelY = r.getY() + 4.0f;
+    g.setColour(subtle);
+    g.fillEllipse(r.getRight()-98.0f, labelY+4.0f, 6.0f, 6.0f);
+    text(g, "IN", r.getRight()-89.0f, labelY, 28.0f, 15.0f, 9.0f, bone);
+    g.setColour(violet);
+    g.fillEllipse(r.getRight()-53.0f, labelY+4.0f, 6.0f, 6.0f);
+    text(g, "OUT", r.getRight()-44.0f, labelY, 42.0f, 15.0f, 9.0f, bone);
 }
 
 SkellSpectreAudioProcessorEditor::Control* SkellSpectreAudioProcessorEditor::addControl(
@@ -653,7 +681,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
         addAndMakeVisible(*b);
     for (auto* b:{&limiter,&autoGain,&hq,&power}) b->setClickingTogglesState(true);
     hq.setButtonText("HQ 2X");
-    hq.setTooltip("2x anti-aliased drive, fixed 8-sample latency at all settings");
+    hq.setTooltip("2x filtered saturation. Always reports 8 samples of plugin delay; uses more CPU.");
     limiter.setTooltip("Stereo-linked sample-peak limiter; not true-peak limiting");
     autoGain.setTooltip("Slow loudness compensation for driven bands");
     presetSave.setTooltip("Export current settings as a .skellpreset file");
@@ -872,7 +900,28 @@ void SkellSpectreAudioProcessorEditor::timerCallback()
     }
     else if(preset.getSelectedId()!=index) preset.setSelectedId(index,juce::dontSendNotification);
     splitStrip.setSelection(static_cast<int>(processor.parameter("slope")));
-    repaint();
+    // Repaint live meter and four numerical readouts, not the full 960x540
+    // reactor background on every UI tick. The skeleton and FFT own timers.
+    repaint(scaled(806, 60, 58, 480, uiScale));
+    if (!showingExpert)
+    {
+        for (int k = 0; k < 4; ++k)
+        {
+            const float value = static_cast<float>(macro[k]->slider->getValue());
+            if (std::abs(value - shownMacroValues[k]) > 0.04f)
+            {
+                shownMacroValues[k] = value;
+                const float x = (k % 2 == 0 ? 133.0f : 287.0f);
+                const float y = (k < 2 ? 236.0f : 405.0f);
+                repaint(scaled(x-37.0f, y+86.0f, 74.0f, 21.0f, uiScale));
+            }
+        }
+    }
+    else
+    {
+        // The crossover captions are custom-painted by this editor.
+        repaint(scaled(251, 245, 600, 20, uiScale));
+    }
 }
 
 void SkellSpectreAudioProcessorEditor::place(Control* c,float x,float y,float w,float h,
@@ -1015,6 +1064,8 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(violet);g.drawLine(74,10,79,20,1);g.drawLine(79,20,74,29,1);
     text(g,"SKELL",99,13,44,16,10,bone);
     text(g,"SPECTRE",99,29,44,14,7.7f,violet);
+    g.setColour(signal.withAlpha(.85f));
+    g.fillRoundedRectangle(99.0f, 45.0f, 44.0f, 1.8f, 0.9f);
     // Header legend above A/B and macro meters.
     text(g,"PRESETS",148,0,85,9,7.3f,subtle);
     g.setColour(rim);g.drawVerticalLine(520,9,49);
@@ -1114,7 +1165,8 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
          juce::Justification::centred);
     text(g,expert?"VIEW":"MODE",871,333,84,16,10,bone,
          juce::Justification::centred);
-    text(g,"AUDIO REACTIVE",870,482,86,13,8.3f,subtle,juce::Justification::centred);
-    text(g,"SKELL AUDIO  1.5",866,515,94,17,8.3f,subtle,
+    text(g,"8 SMP / FIXED",870,471,86,13,8.3f,signal.withAlpha(.85f),juce::Justification::centred);
+    text(g,"AUDIO REACTIVE",870,486,86,13,8.3f,subtle,juce::Justification::centred);
+    text(g,"SKELL AUDIO  1.6",866,515,94,17,8.3f,subtle,
          juce::Justification::centred);
 }

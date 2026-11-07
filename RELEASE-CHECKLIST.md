@@ -1,6 +1,6 @@
 # SKELL SPECTRE — shipping checklist
 
-The v1.5 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
+The v1.6 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
 
 ## Must-pass build and host checks
 
@@ -23,11 +23,14 @@ The v1.5 source is a development candidate, **not a verified commercial-ready re
 - [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
 
-## v1.5 completed checks
+## v1.5–v1.6 completed checks
 
 - [x] Crossover mode transitions exercise initialized filter states; one-sample host automation test added.
 - [x] Drive-character mode changes crossfade their nonlinear curves.
 - [x] Stereo spread attack is sample-rate-correct.
+- [x] Stereo mode changes morph across warmed M/S, Spread and Haas paths (v1.6).
+- [x] Diffuse engagement fades in the phase network after idle periods (v1.6).
+- [x] GUI meter redraws are localized and FFT display interpolates bins (v1.6).
 - [x] Logarithmic input/output meters and sanitized waveform-data ingress.
 - [ ] Rebuild VST3 with MSVC and check the JUCE UI after these changes.
 

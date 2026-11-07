@@ -1,5 +1,15 @@
 # Change log — SKELL SPECTRE
 
+## v1.6.0 — 2026-11-07
+
+- Smooth width processing mode switching between continuously warmed M/S, Spread, and Haas paths.
+- Add a short phase-warmup attenuation for Diffuse activation, preserving zero-allocation audio processing.
+- Reduce GUI repaint area during metering and lower skeleton animation refresh rate.
+- Draw focused selections, higher-contrast band options and accurate FFT interpolation; add input/output plot legend and fixed-delay readout.
+- Add first-sample stereo/Diffuse automation checks and rapid stereo mode stress.
+- Preserve manufacturer ID, plugin ID, all parameter IDs, and fixed 8-sample latency.
+
+
 ## v1.5.0 — 2026-11-07
 
 - Migrate v1.4 Reactor Pro DSP, 2x filtered oversampling and 8-sample latency contract into the GitHub repository.

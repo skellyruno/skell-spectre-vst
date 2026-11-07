@@ -1,10 +1,20 @@
-# SKELL SPECTRE v1.5 — Reactor Pro
+# SKELL SPECTRE v1.6 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-## New in v1.5 (November 7, 2026)
+## New in v1.6 (November 7, 2026)
+
+- **Click-reduced stereo type automation:** Mid/Side, Spread, and Haas no longer switch abruptly. The DSP maintains the spread filter and Haas delay continuously, morphing between their outputs over approximately 10 ms. This also avoids unwarmed delay lines on mode activation.
+- **Diffuse engagement protection:** the 12-stage independently designed phase-rotation network now fades into the wet path over a short (~4.5 ms time constant) warm-up window, reducing the first-sample phase pop after an idle period while retaining CPU savings when fully inactive.
+- **Lighter live UI:** active meters and macro readouts repaint only their changing regions instead of repainting the entire editor 20 times per second. The skeleton animation updates at 24 Hz rather than 30 Hz, without modifying DSP timing.
+- **More legible controls:** keyboard-focus outlines on band and slope selectors; more visible band selection; improved analyzer with fractional FFT-bin interpolation and clearly labeled input/output traces; high-contrast fixed-delay status.
+- **New regression coverage:** initial-sample behavior of stereo mode and Diffuse automation, plus fast mode toggling inside the single-sample stress tests. The installed plugin's IDs and the 8-sample latency contract are unchanged.
+
+The prior v1.5 Windows GitHub Actions build passed. This version requires its own Windows JUCE/VST3 validation before being considered a release candidate.
+
+## Previously added in v1.5 (November 7, 2026)
 
 - **Click-reduced crossover slope automation:** all four filter tap depths stay active, with an 18 ms crossfade between Smooth, Firm, Steep and Brickwall-style. This avoids the previous cold-state transients during slope changes, while preserving four-band complementary recombination.
 - **Drive character morph:** Tube, Tape and Shred now transition over approximately 10 ms rather than switching saturator curves at a sample boundary. Host automation keeps the same parameter choices and IDs.
@@ -60,7 +70,7 @@ The connected GitHub repository `skellyruno/skell-spectre-vst` is the source of 
 
 **Plugin paths:** CMake produces the release VST3 inside `build/SkellSpectre_artefacts/Release/VST3/`. In FL Studio, scan your installed plugin folder after copying the VST3 bundle there.
 
-## Validation already performed
+## Validation and build requirements
 
 - GNU C++17 Release DSP build and regression suite: passed.
 - Clang 17 AddressSanitizer and UndefinedBehaviorSanitizer DSP build/tests: passed.
@@ -68,7 +78,7 @@ The connected GitHub repository `skellyruno/skell-spectre-vst` is the source of 
 - Neutral, latency-aligned processing; mono silence; 44.1/48/96/192 kHz processing; all four slopes; all three saturation modes; block-partition equivalence; bypass alignment; non-finite safety; HQ filter response; anti-aliasing spectral test: passed.
 - Representative 7 kHz / 48 kHz / full-drive synthetic test: 13 kHz folded harmonic measured approximately **54 dB lower** in HQ than normal processing. This is a specific fixture, not a guaranteed worst-case specification.
 
-**Not performed in this environment:** the full JUCE 8 MSVC/VST3 Windows compile; FL Studio / Ableton / Reaper plugin loading and session restore; long-session host automation; pluginval; hardware-real-time CPU profiling; code signing, installers, and release qualification. **Do not label the binary production-certified until these are complete.** See [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).
+**Still required for v1.6:** the full JUCE 8 MSVC/VST3 Windows compile; FL Studio / Ableton / Reaper plugin loading and session restore; long-session host automation; pluginval; hardware-real-time CPU profiling; code signing, installers, and release qualification. **Do not label the binary production-certified until these are complete.** See [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).
 
 ## Audio DSP caveats
 

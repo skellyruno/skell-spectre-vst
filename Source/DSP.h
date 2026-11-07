@@ -49,6 +49,7 @@ public:
         limiterRelease = 1.0f - std::exp(-1.0f / (0.085f * static_cast<float>(sampleRate)));
         // Previously .017/sample: this now has the same stereo response at any host rate.
         spreadCoeff = 1.0f - std::exp(-2.0f * kPi * 131.0f / static_cast<float>(sampleRate));
+        phaseAttackCoeff = 1.0f - std::exp(-1.0f / (0.0045f * static_cast<float>(sampleRate)));
         fastCoeff = 1.0f - std::exp(-1.0f / (0.0035f * static_cast<float>(sampleRate)));
         slowCoeff = 1.0f - std::exp(-1.0f / (0.075f * static_cast<float>(sampleRate)));
         rmsCoeff = 1.0f - std::exp(-1.0f / (0.35f * static_cast<float>(sampleRate)));
@@ -74,12 +75,14 @@ public:
         for (auto& x : envelope) x = {};
         for (auto& d : delays) d = {};
         sideLow.fill(0.0f);
+        phaseReady.fill(0.0f);
         for (auto& channel : oversamplers) for (auto& os : channel) os.reset();
         for (auto& channel : dryInputDelay) channel.fill(0.0f);
         for (auto& channel : rawInputDelay) channel.fill(0.0f);
         inputDelayIndex = 0;
         limiterGain = 1.0f; bypassSmoothed = 0.0f; hqSmoothed = 0.0f;
         smoothedSlope = 3.0f; smoothedDriveType = 0.0f;
+        smoothedWidthType = 0.0f;
         audibleSmoothed.fill(1.0f);
         delayIndex = 0;
         rmsIn = rmsOut = 0.001f;
@@ -108,7 +111,7 @@ public:
         // prevents stale stage states when automating the split slope.
         const float targetSlope = static_cast<float>(std::max(0, std::min(3, settings.slope)));
         const float targetDriveType = static_cast<float>(std::max(0, std::min(2, settings.driveType)));
-        const int widthMode = std::max(0, std::min(2, settings.widthType));
+        const float targetWidthType = static_cast<float>(std::max(0, std::min(2, settings.widthType)));
         bool anySolo = false;
         std::array<std::array<float, 6>, kBands> bandTargets {};
         for (int b=0; b<kBands; ++b)
@@ -124,6 +127,7 @@ public:
             smoothedAlpha = alphaTarget;
             smoothedSlope = targetSlope;
             smoothedDriveType = targetDriveType;
+            smoothedWidthType = targetWidthType;
             bypassSmoothed = targetBypass;
             hqSmoothed = targetHQ;
             smoothedIn = inTarget;
@@ -152,6 +156,9 @@ public:
             hqSmoothed += bypassCoeff * (targetHQ - hqSmoothed);
             smoothedSlope += smoothing * (targetSlope - smoothedSlope);
             smoothedDriveType += bypassCoeff * (targetDriveType - smoothedDriveType);
+            // The Spread / Haas / Mid-Side selector now morphs over ~10 ms;
+            // delay and side-filter memories are continuously maintained.
+            smoothedWidthType += bypassCoeff * (targetWidthType - smoothedWidthType);
             const int slopeLow = std::min(3, static_cast<int>(smoothedSlope));
             const int slopeHigh = std::min(3, slopeLow + 1);
             const float slopeBlend = smoothedSlope - static_cast<float>(slopeLow);
@@ -209,6 +216,11 @@ public:
                 const float bandMix = smoothBand[b][5];
                 const float audibleTarget = (!p.mute && (!anySolo || p.solo)) ? 1.0f : 0.0f;
                 audibleSmoothed[b] += bypassCoeff * (audibleTarget - audibleSmoothed[b]);
+                // Prime all-pass stages before bringing in the phase-rotated path.
+                // Avoids a cold-start transient on Diffuse activation while keeping
+                // the expensive stages off when diffusion is fully inactive.
+                phaseReady[b] += phaseAttackCoeff *
+                    ((diffuse > 0.0001f ? 1.0f : 0.0f) - phaseReady[b]);
                 // Analyze both channels together to avoid transient-induced image movement.
                 // Drive, per-band dry/wet, and the master dry path share fixed
                 // 8-sample latency whether HQ is enabled or not.
@@ -262,38 +274,46 @@ public:
                             ap.z = phased - a * output;
                             phased = output;
                         }
-                        wet += diffuse * (phased - wet);
+                        wet += (diffuse * phaseReady[b]) * (phased - wet);
                     }
                     shaped[c] = dry + bandMix * ((wet * bandGain) - dry);
                 }
 
-                // Stereo modes: M/S, controlled side emphasis, or subtle Haas spread.
-                const float rightBeforeWidth = shaped[1];
+                // Stereo modes: all three candidate paths are warm and the
+                // selection morph is continuous. Side emphasis is mid-safe,
+                // whereas Haas can change mono compatibility by design.
                 if (numChannels == 2)
                 {
                     if (settings.basic && b == 0 && width > 0.0f) width = 0.0f;
-                    float mid = 0.5f * (shaped[0] + shaped[1]);
-                    float side = 0.5f * (shaped[0] - shaped[1]);
-                    if (widthMode == 1)
-                    {
-                        sideLow[b] += spreadCoeff * (side - sideLow[b]);
-                        side += (side - sideLow[b]) * std::max(0.0f, width) * .40f;
-                    }
-                    if (widthMode == 2 && width > 0.0f)
-                    {
-                        auto& d = delays[b];
-                        const int read = (delayIndex - delaySamples + 8192) % 8192;
-                        const float delayedRight = d.samples[read];
-                        const float mixDelay = width * 0.35f;
-                        shaped[1] += mixDelay * (delayedRight - shaped[1]);
-                        mid = 0.5f * (shaped[0] + shaped[1]);
-                        side = 0.5f * (shaped[0] - shaped[1]);
-                    }
+                    const float left = shaped[0], right = shaped[1];
+                    const float mid = 0.5f * (left + right);
+                    const float side = 0.5f * (left - right);
+                    sideLow[b] += spreadCoeff * (side - sideLow[b]);
+                    const float spread = (side - sideLow[b]) * std::max(0.0f, width) * 0.40f;
                     const float multiplier = width < 0.0f ? (1.0f + width) : (1.0f + 1.15f * width);
-                    shaped[0] = mid + side * multiplier;
-                    shaped[1] = mid - side * multiplier;
+                    const float msL = mid + side * multiplier;
+                    const float msR = mid - side * multiplier;
+                    const float spreadL = mid + (side + spread) * multiplier;
+                    const float spreadR = mid - (side + spread) * multiplier;
+                    auto& delay = delays[b];
+                    const int read = (delayIndex - delaySamples + 8192) % 8192;
+                    const float haasRight = right + std::max(0.0f, width) * 0.35f *
+                        (delay.samples[read] - right);
+                    const float haasMid = 0.5f * (left + haasRight);
+                    const float haasSide = 0.5f * (left - haasRight);
+                    const float haasL = haasMid + haasSide * multiplier;
+                    const float haasR = haasMid - haasSide * multiplier;
+                    const int modeLow = std::max(0, std::min(2, static_cast<int>(smoothedWidthType)));
+                    const float modeBlend = clampf(smoothedWidthType - static_cast<float>(modeLow), 0.0f, 1.0f);
+                    const float leftCandidates[] = { msL, spreadL, haasL };
+                    const float rightCandidates[] = { msR, spreadR, haasR };
+                    const int modeHigh = std::min(2, modeLow + 1);
+                    shaped[0] = leftCandidates[modeLow] + modeBlend *
+                        (leftCandidates[modeHigh] - leftCandidates[modeLow]);
+                    shaped[1] = rightCandidates[modeLow] + modeBlend *
+                        (rightCandidates[modeHigh] - rightCandidates[modeLow]);
+                    delay.samples[delayIndex] = right;
                 }
-                if (numChannels == 2) delays[b].samples[delayIndex] = rightBeforeWidth;
                 for (int c = 0; c < numChannels; ++c)
                 {
                     bands[c][b] = shaped[c] * audibleSmoothed[b];
@@ -373,6 +393,7 @@ private:
     double sampleRate = 48000.0;
     float smoothing = .001f, fastCoeff = .01f, slowCoeff = .001f, rmsCoeff = .0001f;
     float bypassCoeff = .001f, limiterRelease = .001f, spreadCoeff = .017f;
+    float phaseAttackCoeff = .003f;
     float smoothedIn = 1.0f, smoothedOut = 1.0f, smoothedMix = 1.0f;
     std::array<float, 3> smoothedAlpha {{ .015f, .12f, .5f }};
     std::array<std::array<float, 6>, kBands> smoothBand {};
@@ -381,13 +402,13 @@ private:
     std::array<Envelope, kBands> envelope {};
     std::array<std::array<float, 12>, kBands> phaseCoefficient {};
     std::array<Delay, kBands> delays {};
-    std::array<float, kBands> sideLow {};
+    std::array<float, kBands> sideLow {}, phaseReady {};
     std::array<float, kBands> audibleSmoothed {{ 1, 1, 1, 1 }};
     std::array<std::array<DriveOversampler, kBands>, 2> oversamplers {};
     std::array<std::array<float, DriveOversampler::latency>, 2> dryInputDelay {}, rawInputDelay {};
     int inputDelayIndex = 0;
     float bypassSmoothed = 0.0f, hqSmoothed = 0.0f, limiterGain = 1.0f;
-    float smoothedSlope = 3.0f, smoothedDriveType = 0.0f;
+    float smoothedSlope = 3.0f, smoothedDriveType = 0.0f, smoothedWidthType = 0.0f;
     int delaySamples = 288, delayIndex = 0;
     float rmsIn = .001f, rmsOut = .001f, autoGainSmoothed = 1.0f;
     bool initialized = false;

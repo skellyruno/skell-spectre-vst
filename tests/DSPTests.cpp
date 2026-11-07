@@ -318,6 +318,8 @@ int main()
             {
                 p.slope=(i/73)%4;
                 p.driveType=(i/79)%3;
+                p.widthType=(i/83)%3;
+                p.bands[2].diffuse=((i/113)%3)*50.0f;
                 const int channels=1+(i/2048)%2;
                 float l=distribution(rng), r=distribution(rng);
                 float* samples[]={&l,&r};
@@ -327,6 +329,74 @@ int main()
             }
         }
         std::cout << "Fast automation and 1-sample host blocks: passed.\n";
+    }
+
+    // The discrete stereo mode selector must interpolate between continuously
+    // warmed M/S, spread and Haas paths. An instantaneous switch used to cause
+    // discontinuities on asymmetric stereo material.
+    {
+        skell::Engine changed, unchanged;
+        changed.prepare(48000.0); unchanged.prepare(48000.0);
+        skell::Settings oldSettings;
+        oldSettings.limiter = false;
+        for (auto& band : oldSettings.bands) band.width = 100.0f;
+        auto newSettings = oldSettings;
+        newSettings.widthType = 2;
+        std::array<float, 2048> l{}, r{}, copyL{}, copyR{};
+        for (int i=0; i<2048; ++i)
+        {
+            l[i] = copyL[i] = .36f * std::sin(.051f * i);
+            r[i] = copyR[i] = .27f * std::cos(.117f * i);
+        }
+        float* a[] = { l.data(), r.data() };
+        float* b[] = { copyL.data(), copyR.data() };
+        changed.process(a, 2, 2048, oldSettings);
+        unchanged.process(b, 2, 2048, oldSettings);
+        float nextL = .36f * std::sin(.051f * 2048.0f);
+        float nextR = .27f * std::cos(.117f * 2048.0f);
+        float baselineL = nextL, baselineR = nextR;
+        float* change[] = { &nextL, &nextR };
+        float* base[] = { &baselineL, &baselineR };
+        changed.process(change, 2, 1, newSettings);
+        unchanged.process(base, 2, 1, oldSettings);
+        const float firstDifference = std::max(std::abs(nextL-baselineL), std::abs(nextR-baselineR));
+        std::cout << "Stereo mode first-sample morph difference: " << firstDifference << '\n';
+        SKELL_CHECK(firstDifference < 0.008f);
+        float settledDifference = 0.0f;
+        for (int i=2049;i<6144;++i)
+        {
+            float cl=.36f*std::sin(.051f*i), cr=.27f*std::cos(.117f*i);
+            float bl=cl, br=cr;
+            float* pc[]={&cl,&cr}; float* pb[]={&bl,&br};
+            changed.process(pc,2,1,newSettings);
+            unchanged.process(pb,2,1,oldSettings);
+            if (i>5600) settledDifference=std::max(settledDifference,std::abs(cl-bl)+std::abs(cr-br));
+            SKELL_CHECK(std::isfinite(cl) && std::isfinite(cr));
+        }
+        SKELL_CHECK(settledDifference > firstDifference + 0.001f);
+    }
+
+    // Diffuse activation must prime phase-filter memory behind a short fade,
+    // avoiding an audible discontinuity at the first sample of automation.
+    {
+        skell::Engine changed, unchanged;
+        changed.prepare(48000.0); unchanged.prepare(48000.0);
+        skell::Settings oldSettings;
+        oldSettings.limiter = false;
+        oldSettings.bands[2].drive = 65.0f;
+        auto newSettings=oldSettings;
+        newSettings.bands[2].diffuse=100.0f;
+        std::array<float, 2048> p{}, q{};
+        for (int i=0;i<2048;++i) p[i]=q[i]=.33f * std::sin(.072f*i);
+        float* a[]={p.data()}; float* b[]={q.data()};
+        changed.process(a,1,2048,oldSettings);
+        unchanged.process(b,1,2048,oldSettings);
+        float cl=.33f*std::sin(.072f*2048.0f), bl=cl;
+        float* pc[]={&cl}; float* pb[]={&bl};
+        changed.process(pc,1,1,newSettings);
+        unchanged.process(pb,1,1,oldSettings);
+        std::cout << "Diffuse first-sample morph difference: " << std::abs(cl-bl) << '\n';
+        SKELL_CHECK(std::abs(cl-bl)<.005f);
     }
 
     // Bypass must return the time-aligned raw input, ignoring output trim and

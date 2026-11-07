@@ -61,7 +61,11 @@ class SplitStrip final : public juce::Component, public juce::SettableTooltipCli
 {
 public:
     std::function<void(int)> onSelect;
-    void setSelection(int s) { selected = juce::jlimit(0, 3, s); repaint(); }
+    void setSelection(int s)
+    {
+        const int value = juce::jlimit(0, 3, s);
+        if (value != selected) { selected = value; repaint(); }
+    }
     void paint(juce::Graphics&) override;
     void mouseUp(const juce::MouseEvent&) override;
     bool keyPressed(const juce::KeyPress&) override;
@@ -128,5 +132,6 @@ private:
     int currentAB = 0;
     bool showingExpert = false, previousBasic = true, rebindingMacro = false;
     float uiScale = 1.0f;
+    std::array<float, 4> shownMacroValues {{ -999.0f, -999.0f, -999.0f, -999.0f }};
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkellSpectreAudioProcessorEditor)
 };
