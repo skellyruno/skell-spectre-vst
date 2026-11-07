@@ -123,12 +123,14 @@ SkellSpectreAudioProcessor::SkellSpectreAudioProcessor()
         r.gain=ptr(prefix+"gain"); r.mix=ptr(prefix+"mix");
         r.mute=ptr(prefix+"mute"); r.solo=ptr(prefix+"solo");
     }
+    // Fixed latency is visible even before the host calls prepareToPlay().
+    setLatencySamples(skell::Engine::latencySamples());
 }
 
 void SkellSpectreAudioProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
 {
     engine.prepare(sampleRate);
-    setLatencySamples(0);
+    setLatencySamples(skell::Engine::latencySamples()); // fixed for HQ/off and bypass
     inputPeak.store(0.0f);
     outputPeak.store(0.0f);
     scopeWrite.store(0);
@@ -151,6 +153,16 @@ float SkellSpectreAudioProcessor::parameter(const juce::String& id) const noexce
 
 void SkellSpectreAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
+    processInternal(buffer, false);
+}
+
+void SkellSpectreAudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+{
+    processInternal(buffer, true);
+}
+
+void SkellSpectreAudioProcessor::processInternal(juce::AudioBuffer<float>& buffer, bool forceBypass)
+{
     juce::ScopedNoDenormals noDenormals;
     const auto activeChannels = std::min(2, getTotalNumInputChannels());
     const int n = buffer.getNumSamples();
@@ -164,6 +176,7 @@ void SkellSpectreAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     s.limiter = get(raw.limiter) > 0.5f;
     s.autoGain = get(raw.autogain) > 0.5f;
     s.hq = get(raw.hq) > 0.5f;
+    s.bypass = forceBypass || get(raw.bypass) > 0.5f;
     s.slope = static_cast<int>(get(raw.slope));
     s.driveType = static_cast<int>(get(raw.driveType));
     s.widthType = static_cast<int>(get(raw.widthType));
@@ -192,18 +205,27 @@ void SkellSpectreAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     // Store a small, lock-free waveform snapshot for the editor FFT; no heap work.
     const auto writeStart = scopeWrite.load(std::memory_order_relaxed);
     for (int i = 0; i < n; ++i)
+    {
+        // Keep malformed host input from poisoning the editor FFT, which
+        // otherwise can generate NaN drawing coordinates and invalid meters.
+        const float sample = ptrs[0][i];
         scopeInput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
-            .store(ptrs[0][i], std::memory_order_relaxed);
-    if (get(raw.bypass) < 0.5f) engine.process(ptrs, activeChannels, n, s);
+            .store(std::isfinite(sample) ? juce::jlimit(-64.0f, 64.0f, sample) : 0.0f,
+                std::memory_order_relaxed);
+    }
+    // Bypass is crossfaded inside the engine; the host always sees fixed latency.
+    engine.process(ptrs, activeChannels, n, s);
     for (int i = 0; i < n; ++i)
         scopeOutput[(writeStart + static_cast<unsigned int>(i)) % spectrumSize]
             .store(ptrs[0][i], std::memory_order_relaxed);
     scopeWrite.store(writeStart + static_cast<unsigned int>(n), std::memory_order_release);
     float after = 0.0f;
     for (int c = 0; c < activeChannels; ++c) after = std::max(after, buffer.getMagnitude(c, 0, n));
-    // Peak hold decay is independent of GUI frame rate.
-    inputPeak.store(std::max(before, inputPeak.load(std::memory_order_relaxed) * .88f), std::memory_order_relaxed);
-    outputPeak.store(std::max(after, outputPeak.load(std::memory_order_relaxed) * .88f), std::memory_order_relaxed);
+    // Meter release is time-based rather than host block-size-based.
+    const auto sr = std::max(8000.0, getSampleRate());
+    const float decay = std::exp(-static_cast<float>(n) / static_cast<float>(sr * 0.20));
+    inputPeak.store(std::max(before, inputPeak.load(std::memory_order_relaxed) * decay), std::memory_order_relaxed);
+    outputPeak.store(std::max(after, outputPeak.load(std::memory_order_relaxed) * decay), std::memory_order_relaxed);
 }
 
 const juce::StringArray& SkellSpectreAudioProcessor::presetNames()
@@ -219,7 +241,7 @@ const juce::StringArray& SkellSpectreAudioProcessor::presetNames()
 
 int SkellSpectreAudioProcessor::getPresetIndex() const
 {
-    return juce::jlimit(0, static_cast<int>(presets.size()) - 1,
+    return juce::jlimit(-1, static_cast<int>(presets.size()) - 1,
         static_cast<int>(parameters.state.getProperty("presetIndex", 0)));
 }
 

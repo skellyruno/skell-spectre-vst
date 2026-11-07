@@ -39,6 +39,7 @@ private:
     SkellSpectreAudioProcessor& processor;
     juce::dsp::FFT fft { 10 };
     std::array<float, 2048> fftData {};
+    std::array<float, 1024> window {};
     std::array<float, 512> magsInput {}, magsOutput {};
 };
 
@@ -51,17 +52,19 @@ public:
     int getSelection() const noexcept { return selection; }
     void paint(juce::Graphics&) override;
     void mouseUp(const juce::MouseEvent&) override;
+    bool keyPressed(const juce::KeyPress&) override;
 private:
     int selection = 0;
 };
 
-class SplitStrip final : public juce::Component
+class SplitStrip final : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     std::function<void(int)> onSelect;
     void setSelection(int s) { selected = juce::jlimit(0, 3, s); repaint(); }
     void paint(juce::Graphics&) override;
     void mouseUp(const juce::MouseEvent&) override;
+    bool keyPressed(const juce::KeyPress&) override;
 private:
     int selected = 3;
 };
@@ -94,9 +97,13 @@ private:
     void setModeStyle();
     void changeAB(int);
     void copyAToB();
+    void saveUserPreset();
+    void loadUserPreset();
 
     SkellSpectreAudioProcessor& processor;
     SkellLookAndFeel look;
+    juce::TooltipWindow tooltipWindow { this, 700 };
+    std::unique_ptr<juce::FileChooser> fileChooser;
     SkullDisplay skull;
     SpectrumDisplay spectrum;
     SplitStrip splitStrip;
@@ -114,6 +121,7 @@ private:
     juce::TextButton prev { "<" }, next { ">" };
     juce::TextButton limiter { "LIMITER" }, autoGain { "AUTOGAIN" }, hq { "HQ" };
     juce::TextButton power { "" }, slotA { "A" }, slotB { "B" }, copyAB { "A > B" };
+    juce::TextButton presetSave { "SAVE" }, presetLoad { "LOAD" };
     juce::ComboBox preset, driveType, widthType;
     juce::Label footer;
     std::array<juce::ValueTree, 2> snapshots;

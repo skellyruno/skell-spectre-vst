@@ -11,6 +11,7 @@ const auto violet = juce::Colour::fromRGB(177, 128, 255);
 const auto bone = juce::Colour::fromRGB(219, 217, 217);
 const auto subtle = juce::Colour::fromRGB(126, 126, 148);
 const auto active = juce::Colour::fromRGB(193, 165, 255);
+const auto signal = juce::Colour::fromRGB(118, 232, 181);
 
 juce::Rectangle<int> scaled(float x, float y, float w, float h, float s)
 {
@@ -66,6 +67,9 @@ SkellLookAndFeel::SkellLookAndFeel()
     setColour(juce::TextButton::textColourOffId, bone);
     setColour(juce::TextButton::textColourOnId, active);
     setColour(juce::Label::textColourId, bone);
+    setColour(juce::TooltipWindow::backgroundColourId, panel.brighter(.08f));
+    setColour(juce::TooltipWindow::textColourId, bone);
+    setColour(juce::TooltipWindow::outlineColourId, violet.withAlpha(.7f));
 }
 
 void SkellLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int w, int h,
@@ -193,6 +197,17 @@ void BandRail::mouseUp(const juce::MouseEvent& e)
     if (newIndex!=selection) {setSelection(newIndex);if(onSelect) onSelect(newIndex);}
 }
 
+bool BandRail::keyPressed(const juce::KeyPress& key)
+{
+    const int code=key.getKeyCode();
+    const int change=(code==juce::KeyPress::upKey || code==juce::KeyPress::leftKey) ? -1 :
+                     (code==juce::KeyPress::downKey || code==juce::KeyPress::rightKey) ? 1 : 0;
+    if (change==0) return false;
+    const int next=juce::jlimit(0,4,selection+change);
+    if (next!=selection) {setSelection(next);if(onSelect)onSelect(next);}
+    return true;
+}
+
 void SplitStrip::paint(juce::Graphics& g)
 {
     const float cell=getWidth()/4.0f;
@@ -226,6 +241,17 @@ void SplitStrip::mouseUp(const juce::MouseEvent& e)
     if (!e.mouseWasClicked()) return;
     const int v=juce::jlimit(0,3,static_cast<int>(e.position.x*4/getWidth()));
     setSelection(v);if(onSelect) onSelect(v);
+}
+
+bool SplitStrip::keyPressed(const juce::KeyPress& key)
+{
+    const int code=key.getKeyCode();
+    const int change=(code==juce::KeyPress::upKey || code==juce::KeyPress::leftKey) ? -1 :
+                     (code==juce::KeyPress::downKey || code==juce::KeyPress::rightKey) ? 1 : 0;
+    if (change==0) return false;
+    const int next=juce::jlimit(0,3,selected+change);
+    if (next!=selected) {setSelection(next);if(onSelect)onSelect(next);}
+    return true;
 }
 
 SkullDisplay::SkullDisplay(SkellSpectreAudioProcessor& p) : processor(p)
@@ -414,6 +440,15 @@ void SkullDisplay::paint(juce::Graphics& g)
         g.setColour(violet.withAlpha(juce::jmin(.75f,.20f+e*.6f)));
         g.strokePath(arc,juce::PathStrokeType(1.5f+e*1.8f));
     }
+    // Signal-health HUD: draws only vector elements; does not affect audio.
+    for (int n=0;n<18;++n)
+    {
+        const float h=4.0f + std::min(22.0f, shownPeak*24.0f*(.3f+((n*7)%11)/11.0f));
+        g.setColour((n<12 ? signal : violet).withAlpha(.15f+shownPeak*.50f));
+        g.fillRoundedRectangle(91.0f+n*12.7f,45.0f-h*.5f,7.0f,h,1.5f);
+    }
+    g.setColour(signal.withAlpha(.48f+shownPeak*.35f));
+    g.drawLine(90,45,319,45,1.0f);
     // Frame and scene title.
     g.setColour(juce::Colour::fromRGB(58,53,75));
     g.drawRect(2,2,396,474,3);
@@ -424,6 +459,9 @@ void SkullDisplay::paint(juce::Graphics& g)
 
 SpectrumDisplay::SpectrumDisplay(SkellSpectreAudioProcessor& p) : processor(p)
 {
+    for (int i=0;i<1024;++i)
+        window[static_cast<size_t>(i)] = .5f - .5f*std::cos(
+            2.0f*skell::kPi*static_cast<float>(i)/1023.0f);
     setInterceptsMouseClicks(false, false);
     startTimerHz(20);
 }
@@ -441,8 +479,7 @@ void SpectrumDisplay::timerCallback()
             const auto index = (end - 1024u + static_cast<unsigned int>(i)) % 1024u;
             const float wave = scope[index].load(std::memory_order_relaxed);
             // Hann window
-            const float hann = .5f - .5f*std::cos(2.0f*skell::kPi*static_cast<float>(i)/1023.0f);
-            fftData[i] = wave * hann;
+            fftData[i] = wave * window[static_cast<size_t>(i)];
         }
         fft.performFrequencyOnlyForwardTransform(fftData.data());
         auto& dest = stage == 0 ? magsInput : magsOutput;
@@ -511,7 +548,15 @@ SkellSpectreAudioProcessorEditor::Control* SkellSpectreAudioProcessorEditor::add
     c->name->setText(caption,juce::dontSendNotification);
     c->name->setJustificationType(juce::Justification::centred);
     c->name->setColour(juce::Label::textColourId,bone);
-    c->slider->setTooltip(caption+" — drag to change; double-click to reset");
+    c->slider->setTooltip(caption+" — drag or scroll to adjust; double-click resets");
+    c->slider->setPopupDisplayEnabled(true, true, this);
+    c->slider->onDragEnd=[this]
+    {
+        processor.parameters.state.setProperty("presetIndex", -1, nullptr);
+    };
+    if (id=="input" || id=="output" || id.endsWith("gain")) c->slider->setTextValueSuffix(" dB");
+    else if (id.startsWith("cross")) c->slider->setTextValueSuffix(" Hz");
+    else c->slider->setTextValueSuffix(" %");
     addAndMakeVisible(*c->slider);
     addAndMakeVisible(*c->name);
     auto* p=c.get();
@@ -528,6 +573,7 @@ void SkellSpectreAudioProcessorEditor::setParam(const juce::String& id,float v)
         p->beginChangeGesture();
         p->setValueNotifyingHost(p->convertTo0to1(v));
         p->endChangeGesture();
+        processor.parameters.state.setProperty("presetIndex", -1, nullptr);
     }
 }
 
@@ -561,22 +607,23 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     addAndMakeVisible(skull);
     addAndMakeVisible(spectrum);
     addAndMakeVisible(splitStrip);
+    splitStrip.setWantsKeyboardFocus(true);
+    splitStrip.setTooltip("Crossover slopes: nominal 12 / 24 / 36 / 48 dB per octave. Arrow keys to change.");
     const juce::String ids[]={"drive","punch","stereo","diffuse"};
     const juce::String names[]={"DRIVE","PUNCH","STEREO","DIFFUSE"};
     for (int k=0;k<4;++k)
     {
         macro[k]=addControl(ids[k],names[k],false,false);
         addAndMakeVisible(rails[k]);
-        rails[k].setTooltip("ALL = all bands, A-D = a single frequency band");
+        rails[k].setWantsKeyboardFocus(true);
+        rails[k].setTooltip("ALL = global macro; A–D = edit one band. Arrow keys to select.");
         rails[k].onSelect=[this,k](int index)
         {
             if (index>0 && processor.parameter("basic")>.5f)
                 changeMode(false);
             bindMacro(k,index);
-            bool all=true;
-            for (const auto& rail:rails) if (rail.getSelection()!=0) all=false;
-            if (all && processor.parameter("basic")<.5f)
-                changeMode(true);
+            // Returning all selectors to ALL must NOT discard Expert edits.
+            // The BANDS view explicitly controls whether Expert mode is entered.
             repaint();
         };
     }
@@ -602,9 +649,17 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
             bandSwitches[b][j]=std::move(btn);
         }
     }
-    for (auto* b:{&modeToggle,&prev,&next,&limiter,&autoGain,&hq,&power,&slotA,&slotB,&copyAB})
+    for (auto* b:{&modeToggle,&prev,&next,&limiter,&autoGain,&hq,&power,&slotA,&slotB,&copyAB,&presetSave,&presetLoad})
         addAndMakeVisible(*b);
     for (auto* b:{&limiter,&autoGain,&hq,&power}) b->setClickingTogglesState(true);
+    hq.setButtonText("HQ 2X");
+    hq.setTooltip("2x anti-aliased drive, fixed 8-sample latency at all settings");
+    limiter.setTooltip("Stereo-linked sample-peak limiter; not true-peak limiting");
+    autoGain.setTooltip("Slow loudness compensation for driven bands");
+    presetSave.setTooltip("Export current settings as a .skellpreset file");
+    presetLoad.setTooltip("Import settings from a .skellpreset file");
+    presetSave.onClick=[this] {saveUserPreset();};
+    presetLoad.onClick=[this] {loadUserPreset();};
     power.setName("SKELL_POWER");
     power.setTooltip("Bypass plugin (automatable)");
     buttonAttachments.push_back(std::make_unique<ButtonAttachment>(processor.parameters,"limiter",limiter));
@@ -628,12 +683,14 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     prev.onClick=[this]
     {
         const int n=preset.getNumItems();
-        if (n>0) preset.setSelectedId((preset.getSelectedId()+n-2)%n+1);
+        if (n>0) preset.setSelectedId(preset.getSelectedId()>0 ?
+            (preset.getSelectedId()+n-2)%n+1 : n);
     };
     next.onClick=[this]
     {
         const int n=preset.getNumItems();
-        if (n>0) preset.setSelectedId(preset.getSelectedId()%n+1);
+        if (n>0) preset.setSelectedId(preset.getSelectedId()>0 ?
+            preset.getSelectedId()%n+1 : 1);
     };
     driveType.addItemList({"TUBE","TAPE","SHRED"},1);
     widthType.addItemList({"MID / SIDE","SPREAD","HAAS"},1);
@@ -651,6 +708,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     footer.setColour(juce::Label::textColourId,subtle);
     addAndMakeVisible(footer);
     previousBasic=processor.parameter("basic")>.5f;
+    showingExpert=!previousBasic; // host-restored Expert sessions open in Expert view
     for (int k=0;k<4;++k) bindMacro(k,0);
     snapshots[0]=processor.parameters.copyState();
     snapshots[1]=snapshots[0].createCopy();
@@ -717,9 +775,8 @@ void SkellSpectreAudioProcessorEditor::changeAB(int index)
     currentAB=index;
     processor.parameters.replaceState(snapshots[index].createCopy());
     const bool basic=processor.parameter("basic")>.5f;
-    for (int k=0;k<4;++k)
-        if(basic) bindMacro(k,0);
-    if(basic) showingExpert=false;
+    for (int k=0;k<4;++k) bindMacro(k,0);
+    showingExpert=!basic;
     previousBasic=basic;
     setModeStyle();resized();repaint();
 }
@@ -729,6 +786,69 @@ void SkellSpectreAudioProcessorEditor::copyAToB()
     snapshots[1]=snapshots[0].createCopy();
     if(currentAB==1) processor.parameters.replaceState(snapshots[1].createCopy());
     repaint();
+}
+
+void SkellSpectreAudioProcessorEditor::saveUserPreset()
+{
+    fileChooser=std::make_unique<juce::FileChooser>(
+        "Export SKELL SPECTRE preset", juce::File::getSpecialLocation(
+        juce::File::userDocumentsDirectory).getChildFile("My Skell Spectre.skellpreset"),
+        "*.skellpreset");
+    juce::Component::SafePointer<SkellSpectreAudioProcessorEditor> safe(this);
+    fileChooser->launchAsync(juce::FileBrowserComponent::saveMode |
+        juce::FileBrowserComponent::canSelectFiles |
+        juce::FileBrowserComponent::warnAboutOverwriting,
+        [safe](const juce::FileChooser& fc)
+        {
+            if (safe == nullptr) return;
+            auto file=fc.getResult();
+            if (file==juce::File{}) return;
+            if (!file.hasFileExtension(".skellpreset")) file=file.withFileExtension(".skellpreset");
+            juce::MemoryBlock data;
+            safe->processor.getStateInformation(data);
+            const bool saved=file.replaceWithData(data.getData(), data.getSize());
+            if (!saved)
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Preset not saved", "Cannot write to the selected location.");
+        });
+}
+
+void SkellSpectreAudioProcessorEditor::loadUserPreset()
+{
+    fileChooser=std::make_unique<juce::FileChooser>(
+        "Import SKELL SPECTRE preset", juce::File::getSpecialLocation(
+        juce::File::userDocumentsDirectory), "*.skellpreset");
+    juce::Component::SafePointer<SkellSpectreAudioProcessorEditor> safe(this);
+    fileChooser->launchAsync(juce::FileBrowserComponent::openMode |
+        juce::FileBrowserComponent::canSelectFiles,
+        [safe](const juce::FileChooser& fc)
+        {
+            if (safe == nullptr) return;
+            const auto file=fc.getResult();
+            if (!file.existsAsFile()) return;
+            if (file.getSize()<=0 || file.getSize()>1024*1024)
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Invalid preset", "This preset file is empty or too large.");
+                return;
+            }
+            juce::MemoryBlock data;
+            if (!file.loadFileAsData(data)) return;
+            const auto xml=juce::AudioProcessor::getXmlFromBinary(data.getData(),
+                static_cast<int>(data.getSize()));
+            if (xml==nullptr || !xml->hasTagName("SKELL_STATE"))
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Invalid preset", "This is not a SKELL SPECTRE preset.");
+                return;
+            }
+            safe->processor.setStateInformation(data.getData(),static_cast<int>(data.getSize()));
+            safe->processor.parameters.state.setProperty("presetIndex",-1,nullptr);
+            for (int k=0;k<4;++k) safe->bindMacro(k,0);
+            safe->showingExpert=safe->processor.parameter("basic")<.5f;
+            safe->previousBasic=!safe->showingExpert;
+            safe->setModeStyle();safe->resized();safe->repaint();
+        });
 }
 
 void SkellSpectreAudioProcessorEditor::timerCallback()
@@ -745,7 +865,12 @@ void SkellSpectreAudioProcessorEditor::timerCallback()
         setModeStyle();resized();
     }
     const int index=processor.getPresetIndex()+1;
-    if(preset.getSelectedId()!=index) preset.setSelectedId(index,juce::dontSendNotification);
+    if(index<=0)
+    {
+        if(preset.getSelectedId()!=0) preset.setSelectedId(0,juce::dontSendNotification);
+        if(preset.getText()!="CUSTOM") preset.setText("CUSTOM",juce::dontSendNotification);
+    }
+    else if(preset.getSelectedId()!=index) preset.setSelectedId(index,juce::dontSendNotification);
     splitStrip.setSelection(static_cast<int>(processor.parameter("slope")));
     repaint();
 }
@@ -793,6 +918,8 @@ void SkellSpectreAudioProcessorEditor::resized()
         place(masters[k],768+k*39,2,37,54,true,true);
     power.setBounds(scaled(918,7,35,42,uiScale));
     modeToggle.setBounds(scaled(877,279,76,34,uiScale));
+    presetSave.setBounds(scaled(873,371,80,31,uiScale));
+    presetLoad.setBounds(scaled(873,408,80,31,uiScale));
     modeToggle.setButtonText(showingExpert?"CHARACTER":"BANDS");
     footer.setVisible(!showingExpert);
     footer.setBounds(scaled(408,520,454,17,uiScale));
@@ -941,19 +1068,38 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour::fromRGB(13,14,22));g.fillRect(806,60,58,480);
     text(g,"IN",814,82,40,15,9,bone,juce::Justification::centred);
     text(g,"OUT",814,229,40,15,9,bone,juce::Justification::centred);
-    const float in=juce::jlimit(0.0f,1.0f,processor.inputPeak.load(std::memory_order_relaxed));
-    const float out=juce::jlimit(0.0f,1.0f,processor.outputPeak.load(std::memory_order_relaxed));
-    for (int j=0;j<2;++j)
+    const float in = processor.inputPeak.load(std::memory_order_relaxed);
+    const float out = processor.outputPeak.load(std::memory_order_relaxed);
+    for (int j = 0; j < 2; ++j)
     {
-        const float yy=j==0?104.0f:251.0f;
-        const float level=j==0?in:out;
-        g.setColour(juce::Colour::fromRGB(39,36,53));
-        g.fillRoundedRectangle(831,yy,8,105,3);
-        g.setColour(j==0?violet:active);
-        const float filled=105.0f*level;
-        if(filled>0.01f)g.fillRoundedRectangle(831,yy+105-filled,8,filled,2);
-        text(g,juce::String(juce::Decibels::gainToDecibels(std::max(.00001f,level)),0)+" dB",
-             806,yy+110,57,15,8,subtle,juce::Justification::centred);
+        const float yy = j == 0 ? 104.0f : 251.0f;
+        const float level = j == 0 ? in : out;
+        const float db = std::isfinite(level) ?
+            juce::Decibels::gainToDecibels(std::max(0.000001f, level)) : -100.0f;
+        // Logarithmic meter: useful headroom resolution from -60 to 0 dBFS.
+        const float fraction = juce::jlimit(0.0f, 1.0f, (db + 60.0f) / 60.0f);
+        g.setColour(juce::Colour::fromRGB(34, 35, 47));
+        g.fillRoundedRectangle(831.0f, yy, 9.0f, 105.0f, 3.0f);
+        const float filled = 105.0f * fraction;
+        const bool over = db >= 0.0f;
+        const auto colour = over ? juce::Colour::fromRGB(255, 125, 105) :
+            (j == 0 ? violet : signal);
+        if (filled >= 0.1f)
+        {
+            juce::ColourGradient gradient(colour.withAlpha(.48f), 835.0f, yy + 105.0f,
+                                          colour, 835.0f, yy, false);
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(831.0f, yy + 105.0f - filled, 9.0f, filled, 2.0f);
+        }
+        for (float tickDb : {-36.0f, -18.0f, -6.0f})
+        {
+            const float tickY = yy + 105.0f * (1.0f - (tickDb + 60.0f) / 60.0f);
+            g.setColour(bone.withAlpha(.34f));
+            g.drawHorizontalLine(juce::roundToInt(tickY), 826.0f, 844.0f);
+        }
+        text(g, over ? "0+ dB" : (db <= -60.0f ? "-inf" : juce::String(db, 0) + " dB"),
+             806.0f, yy + 110.0f, 57.0f, 15.0f, 8.0f,
+             over ? colour : subtle, juce::Justification::centred);
     }
     // Right-mode rail: same proportions as the reference, fully independent artwork.
     g.setColour(juce::Colour::fromRGB(13,14,21));g.fillRect(865,60,95,480);
@@ -969,6 +1115,6 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
     text(g,expert?"VIEW":"MODE",871,333,84,16,10,bone,
          juce::Justification::centred);
     text(g,"AUDIO REACTIVE",870,482,86,13,8.3f,subtle,juce::Justification::centred);
-    text(g,"SKELL AUDIO  1.2",866,515,94,17,8.3f,subtle,
+    text(g,"SKELL AUDIO  1.5",866,515,94,17,8.3f,subtle,
          juce::Justification::centred);
 }

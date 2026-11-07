@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SkellSpectre VERSION 1.2.1 LANGUAGES C CXX)
+project(SkellSpectre VERSION 1.5.0 LANGUAGES C CXX)
 
 # Retains the SKELL quickstart's JUCE_PATH override and pinned JUCE 8.0.12,
 # along with its unique manufacturer namespace and Windows VST3 workflow.
@@ -46,7 +46,8 @@ if(SKELL_BUILD_PLUGIN)
     Source/PluginProcessor.h
     Source/PluginEditor.cpp
     Source/PluginEditor.h
-    Source/DSP.h)
+    Source/DSP.h
+    Source/DriveOversampler.h)
   target_compile_features(SkellSpectre PRIVATE cxx_std_17)
   target_compile_definitions(SkellSpectre PUBLIC
     JUCE_VST3_CAN_REPLACE_VST2=0

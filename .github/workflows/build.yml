@@ -1,24 +1,57 @@
-name: Build Windows VST3
+name: Build SKELL SPECTRE Windows VST3
 on:
   workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
 
 jobs:
+  dsp-sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Configure DSP regression with Clang sanitizers
+        env:
+          CC: clang
+          CXX: clang++
+        run: >-
+          cmake -S . -B build-dsp
+          -DSKELL_BUILD_PLUGIN=OFF -DSKELL_BUILD_TESTS=ON
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+      - name: Build DSP tests
+        run: cmake --build build-dsp --parallel 2
+      - name: Run DSP regressions
+        run: ctest --test-dir build-dsp --output-on-failure
+
   build:
+    needs: dsp-sanitizers
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S . -B build -A x64
-      - name: Build
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Configure JUCE 8 and x64 targets
+        run: cmake -S . -B build -A x64 -DSKELL_BUILD_TESTS=ON
+      - name: Build plugin and DSP tests
         run: cmake --build build --config Release --parallel 2
-      - name: Package
+      - name: Run DSP regressions
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package compiled VST3 bundle
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem -Path build -Directory -Recurse -Filter '*.vst3' | Select-Object -First 1
-          if (-not $plugin) { throw 'VST3 bundle missing' }
-          Compress-Archive -Path $plugin.FullName -DestinationPath SkellPlugin-Windows-VST3.zip
-      - uses: actions/upload-artifact@v4
+          $plugin = Get-ChildItem -Path build/SkellSpectre_artefacts -Directory -Recurse -Filter '*.vst3' | Select-Object -First 1
+          if (-not $plugin) { throw 'SKELL SPECTRE .vst3 bundle missing' }
+          # Archive the actual .vst3 directory, not only its Contents folder.
+          Push-Location $plugin.Parent.FullName
+          try {
+            Compress-Archive -Path $plugin.Name -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'SKELL-SPECTRE-Windows-VST3.zip') -Force
+          }
+          finally { Pop-Location }
+      - name: Upload Windows VST3
+        uses: actions/upload-artifact@v4
         with:
-          name: SkellPlugin-Windows-VST3
-          path: SkellPlugin-Windows-VST3.zip
+          name: SKELL-SPECTRE-Windows-VST3
+          path: SKELL-SPECTRE-Windows-VST3.zip
           if-no-files-found: error

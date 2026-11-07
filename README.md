@@ -1,48 +1,82 @@
-# SKELL SPECTRE v1.2.1 — Reactor UI Build Fix
+# SKELL SPECTRE v1.5 — Reactor Pro
 
-An original skeleton-themed, four-band texture-shaping VST3 effect based on the supplied **Skell VST JUCE template**. v1.2 redesigns the GUI around the user's 880 × 493 reference: compact horizontal format, purple electromechanical knobs, split modes, and a full-body reactive skeleton in a bespoke laboratory chamber. **The GUI is all JUCE vector graphics, not a borrowed screenshot or a bitmap imitation of the referenced character.**
+**Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
-## v1.2.1 — MSVC / JUCE 8 build fixes
+This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-- Corrected `Graphics::fillRect` arguments in `Source/PluginEditor.cpp` near line 295 to explicitly select the float overload (resolves MSVC C2666).
-- Made `BandRail` inherit from `juce::SettableTooltipClient`, enabling its tooltip text without requiring an unavailable `Component::setTooltip` member (resolves MSVC C2039).
-- Preserved v1.2 UI, parameters, DSP, factory presets, and GitHub Actions build system.
-- **Validation:** JUCE-free DSP regression tests run locally; a Windows JUCE VST3 build still needs confirmation in GitHub Actions or Visual Studio.
+## New in v1.5 (November 7, 2026)
 
-## What changed in v1.2
+- **Click-reduced crossover slope automation:** all four filter tap depths stay active, with an 18 ms crossfade between Smooth, Firm, Steep and Brickwall-style. This avoids the previous cold-state transients during slope changes, while preserving four-band complementary recombination.
+- **Drive character morph:** Tube, Tape and Shred now transition over approximately 10 ms rather than switching saturator curves at a sample boundary. Host automation keeps the same parameter choices and IDs.
+- **Sample-rate-correct stereo spread:** the side-channel high-pass enhancement uses a time-based coefficient at 44.1–192 kHz, instead of a fixed per-sample constant.
+- **More readable Reactor meters:** -60 to 0 dBFS logarithmic scale, -36/-18/-6 dB grid markers, and an over-0 indication instead of an uninformative linear bar.
+- **Safer input FFT:** non-finite host input and enormous outliers are sanitized before writing analyzer ring-buffer samples.
+- **More automation regression tests:** mode transitions under a sustained tone, aggressive single-sample-block host automation across two sample rates, plus earlier latency, limiter and anti-alias tests.
+- **Windows artifact packaging fix:** the zipped artifact now includes the complete `.vst3` directory for installation.
 
-- Reworked the default window from 1080 × 740 to **880 × 495** (about 40% smaller in area), with fixed 16:9 aspect ratio and resizable UI down to 704 × 396.
-- Built a tall, original full-body skeletal character with an open purple jacket, ribs, cracked skull, electrical coils, pipes, and a reactor platform. Eye intensity/electric arcs respond to the processed signal.
-- Redesigned four full-size controls (DRIVE, PUNCH, STEREO, DIFFUSE) as metallic dials; values are shown below.
-- Added four independent **ALL/A/B/C/D** selector rails. **ALL** adjusts the global macro in Basic mode, or simultaneously updates all four expert-band values while Expert DSP is enabled. Selecting A–D switches to Expert DSP and edits the chosen band's value for that effect. Returning every selector to ALL restores Basic processing.
-- Split-slope switch is a functional four-position custom graphic selector (**Smooth / Firm / Steep / Brickwall-ish**). The DSP uses 12/24/36/48 dB/oct nominal cascades, *not an ideal brickwall filter*.
-- New **BANDS** button on the right toggles full Expert editor containing independent band controls, crossover frequency sliders and readouts, gain/mix, mute/solo, saturation mode, stereo mode and FFT.
-- Added **automatable BYPASS** controlled by the power icon. When bypassed, audio passes through unchanged.
-- Added session-local **A/B** controls with copy A → B for evaluating settings. A/B slots are not serialized in DAW state; the active parameter state is.
-- Kept presets, HQ, limiter, autogain, mono/stereo, nonblocking DSP and lock-free editor meters.
+### Scope and compatibility
 
-## Build — Windows/GitHub Actions
+This iteration is built on the previously supplied v1.4 **source**, not on any unverified newer binary. Manufacturer/plugin IDs (`SkAu`/`Spct`), APVTS parameter identifiers, source preset names and **8-sample** reported host latency remain unchanged. A full JUCE/MSVC VST3 compile and FL Studio integration tests have not yet run in this environment.
 
-The project retains JUCE 8.0.12, the template's `SkAu` manufacturer code and `Spct` plugin code, the GitHub Windows VST3 build workflow, and `BUILD-WINDOWS.ps1`. The ZIP's **root contents** belong at the root of your repository.
+## Previously added in v1.4
 
-Windows command:
+### DSP and host stability
+
+- **Real 2x HQ saturation** with 17-tap linear-phase halfband interpolation and decimation. Unlike v1.2's midpoint method, HQ now filters high-frequency nonlinear images.
+- **Constant 8-sample latency**, on/off HQ, wet/dry, normal bypass and DAW-host bypass. Reported using `setLatencySamples()` so the host can compensate.
+- **Smoothed bypass (10 ms)** and **smoothed band mute/solo (10 ms)** to reduce switching artifacts.
+- **Stereo-linked sample-peak limiter** with instantaneous peak gain reduction and approximately 85 ms release. This is **not** an oversampled intersample/true-peak limiter.
+- **Faster control smoothing**: crossover frequency exponentials and dB-to-gain conversions are evaluated once per audio block rather than repeatedly for every sample.
+- Mono and stereo compatibility, constant-latency dry paths, input sanitization for non-finite or pathological samples, and time-based meter decay.
+- The Haas spread mid/side calculation now uses the updated right-channel sample, so the output does not add an unintended centre-channel error.
+
+### Interface and workflow
+
+- Preserves the compact, scalable Reactor UI with full-body vector skeleton and original purple analog controls, plus **reactive signal HUD** and secondary mint-coloured meters.
+- Faster live spectrum drawing via a cached Hann window.
+- **HQ 2X** label and clear processing-limit tooltips; popup value readouts on drag/hover and units in the popups.
+- **SAVE / LOAD** custom `.skellpreset` files (binary JUCE XML state), using non-blocking file chooser dialogs. Imported files are validated for type and maximum size.
+- Band selector rails and split selector support keyboard arrows; tooltip descriptions explain their functions.
+- Switching all four band rails to ALL no longer silently discards Expert mode; an Expert session restored by a DAW opens its Expert view.
+- Edited settings display **CUSTOM** in the preset menu after manual drag or custom command; preset navigation works from CUSTOM.
+
+### Tests and build
+
+Run DSP tests without JUCE:
+
+```bash
+cmake -S . -B build-dsp -DSKELL_BUILD_PLUGIN=OFF -DSKELL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build-dsp --config Release
+ctest --test-dir build-dsp -C Release --output-on-failure
+```
+
+Windows native build (requires Visual Studio 2026 and network access for JUCE 8.0.12 unless `-JucePath` is supplied):
 
 ```powershell
 .\BUILD-WINDOWS.ps1 -Generator 'Visual Studio 18 2026'
 ```
 
-Or upload the root source files to GitHub and run **Actions → Build SKELL SPECTRE Windows VST3 → Run workflow**. Download the resulting `SKELL-SPECTRE-Windows-VST3` artifact when the build succeeds.
+The connected GitHub repository `skellyruno/skell-spectre-vst` is the source of truth. Run its build workflow at **Actions → Build SKELL SPECTRE Windows VST3 → Run workflow** after updating source. The workflow builds the VST3 plus Standalone, runs the DSP regressions, and packages the compiled bundle.
 
-For an offline DSP-only build on a host with CMake and C++17 (no JUCE required):
+**Plugin paths:** CMake produces the release VST3 inside `build/SkellSpectre_artefacts/Release/VST3/`. In FL Studio, scan your installed plugin folder after copying the VST3 bundle there.
 
-```bash
-cmake -S . -B build-dsp -DSKELL_BUILD_PLUGIN=OFF -DSKELL_BUILD_TESTS=ON
-cmake --build build-dsp --config Release
-ctest --test-dir build-dsp --output-on-failure
-```
+## Validation already performed
 
-## Engine and scope
+- GNU C++17 Release DSP build and regression suite: passed.
+- Clang 17 AddressSanitizer and UndefinedBehaviorSanitizer DSP build/tests: passed.
+- Compile with Clang `-Wall -Wextra -Wpedantic`: passed with no warnings.
+- Neutral, latency-aligned processing; mono silence; 44.1/48/96/192 kHz processing; all four slopes; all three saturation modes; block-partition equivalence; bypass alignment; non-finite safety; HQ filter response; anti-aliasing spectral test: passed.
+- Representative 7 kHz / 48 kHz / full-drive synthetic test: 13 kHz folded harmonic measured approximately **54 dB lower** in HQ than normal processing. This is a specific fixture, not a guaranteed worst-case specification.
 
-Independent four-band Drive, Punch, Stereo, and Diffuse, plus per-band gain, dry/wet blend, and mute/solo; three adjustable crossovers; 30 factory presets; input/output trim; master mix; basic/expert processing. Drive HQ is midpoint interpolation rather than true filtered oversampling. The limiter is a sample-peak safety clip, not look-ahead true-peak limiting. Diffuse is independent all-pass phase dispersion, not the proprietary Phantomic algorithm.
+**Not performed in this environment:** the full JUCE 8 MSVC/VST3 Windows compile; FL Studio / Ableton / Reaper plugin loading and session restore; long-session host automation; pluginval; hardware-real-time CPU profiling; code signing, installers, and release qualification. **Do not label the binary production-certified until these are complete.** See [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).
 
-**Validation limits:** DSP-only CMake regression tests run in this environment. A full JUCE Windows plugin build and DAW UI/automation validation must still be carried out on Windows or GitHub Actions. Not affiliated with the referenced plugin developer. Do not distribute binaries without respecting JUCE license requirements.
+## Audio DSP caveats
+
+- HQ is **2x**, not 4x/8x. Aliasing at extreme drive/high source frequencies is not eliminated.
+- Split modes are complementary cascaded-IIR divisions with nominal 12/24/36/48 dB/octave rolls; "Brickwall" is an artistic UI label, **not an ideal brickwall or linear-phase crossover**.
+- Limiter guarantees only a bounded **sample peak** in active processing, not an intersample true peak. The bypass deliberately preserves original sample levels.
+- Haas stereo mode can reduce mono compatibility; audition mono before printing a mix.
+- A/B slots are session-local to the editor and not serialized, while the current parameter state is saved in the DAW project. Imported user presets save just the current state.
+- DSP operates at floating-point sample rate / block size independently; editor and plugin wrappers still require end-to-end Windows validation.
+
+SKELL SPECTRE is independently implemented and unaffiliated with the Phantomic developer. JUCE redistribution requires compliance with your JUCE license.
