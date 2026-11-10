@@ -168,7 +168,10 @@ void SkellLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int w, 
 void SkellLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& b,
     const juce::Colour&, bool highlighted, bool pressed)
 {
+    juce::Graphics::ScopedSaveState saved(g);
+    if (!b.isEnabled()) g.setOpacity(0.44f);
     auto r = b.getLocalBounds().toFloat().reduced(.8f);
+    const bool hover = highlighted || b.getState() == juce::Button::buttonOver;
     if (b.getName() == "SKELL_POWER")
     {
         const float d = std::min(r.getWidth(),r.getHeight())-5.0f;
@@ -183,9 +186,9 @@ void SkellLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& b,
         return;
     }
     const bool on=b.getToggleState();
-    g.setColour(on ? juce::Colour::fromRGB(38,30,53) : (highlighted ? panel.brighter(.12f) : panel));
+    g.setColour(on ? juce::Colour::fromRGB(38,30,53) : (hover ? panel.brighter(.22f) : panel));
     g.fillRoundedRectangle(r,7);
-    g.setColour(on ? violet : rim.brighter(.12f));
+    g.setColour(on ? violet : (hover ? violet.withAlpha(.78f) : rim.brighter(.12f)));
     g.drawRoundedRectangle(r,7,on?1.4f:1.0f);
     if (pressed) {g.setColour(violet.withAlpha(.12f));g.fillRoundedRectangle(r,7);}
 }
@@ -1044,7 +1047,7 @@ void SkellSpectreAudioProcessorEditor::resized()
     modeToggle.setBounds(scaled(877,279,76,34,uiScale));
     presetSave.setBounds(scaled(873,371,80,31,uiScale));
     presetLoad.setBounds(scaled(873,408,80,31,uiScale));
-    modeToggle.setButtonText(showingExpert?"CHARACTER":"BANDS");
+    modeToggle.setButtonText(showingExpert?"SKULL":"BANDS");
     footer.setVisible(!showingExpert);
     footer.setBounds(scaled(408,520,454,17,uiScale));
     footer.setFont(juce::Font(juce::FontOptions(9.1f*uiScale)));
@@ -1128,7 +1131,7 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
     }
     g.setColour(juce::Colour::fromRGB(62,55,72));
     g.drawVerticalLine(407,60,540);
-    g.drawVerticalLine(805,60,540);
+    if (!showingExpert) g.drawVerticalLine(805,60,540);
     g.drawVerticalLine(864,60,540);
     // Original Skell skull badge in the top left.
     g.setColour(juce::Colours::black);g.fillEllipse(53,3,41,49);
@@ -1188,7 +1191,12 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
             g.setColour(rim);g.drawHorizontalLine(448, x+10,x+191);
         }
     }
-    // Thin meter/breakout panel adjacent to the central reactor scene.
+    // Character mode reserves its own meter strip beside the reactor. In
+    // Expert, band D extends to x=850: a meter strip starting at x=806 used
+    // to paint over its right-side knob, mute and sliders. Keep this strip
+    // out of the Expert band cards and put compact meters in the sidebar.
+    if (!expert)
+    {
     g.setColour(juce::Colour::fromRGB(13,14,22));g.fillRect(806,60,58,480);
     text(g,"IN",814,82,40,15,9,bone,juce::Justification::centred);
     text(g,"OUT",814,229,40,15,9,bone,juce::Justification::centred);
@@ -1225,9 +1233,35 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
              806.0f, yy + 110.0f, 57.0f, 15.0f, 8.0f,
              over ? colour : subtle, juce::Justification::centred);
     }
+    }
     // Right-mode rail: same proportions as the reference, fully independent artwork.
     g.setColour(juce::Colour::fromRGB(13,14,21));g.fillRect(865,60,95,480);
     g.setColour(rim);g.drawVerticalLine(865,61,539);
+    if (expert)
+    {
+        // Compact horizontal log meters fit the spare right rail and leave
+        // the four-band controls completely unobscured, even at 704 x 396.
+        for (int j = 0; j < 2; ++j)
+        {
+            const float yy = j == 0 ? 77.0f : 151.0f;
+            const float peak = j == 0 ? processor.inputPeak.load(std::memory_order_relaxed)
+                                      : processor.outputPeak.load(std::memory_order_relaxed);
+            const float db = std::isfinite(peak)
+                ? juce::Decibels::gainToDecibels(std::max(0.000001f, peak)) : -100.0f;
+            const float frac = juce::jlimit(0.0f, 1.0f, (db + 60.0f) / 60.0f);
+            text(g, j == 0 ? "INPUT" : "OUTPUT", 875, yy, 74, 14, 9.0f, bone);
+            g.setColour(juce::Colour::fromRGB(43, 42, 58));
+            g.fillRoundedRectangle(876.0f, yy + 20.0f, 72.0f, 8.0f, 3.0f);
+            const auto colour = j == 0 ? violet : signal;
+            if (frac > 0.0f)
+            {
+                g.setColour(colour);
+                g.fillRoundedRectangle(876.0f, yy + 20.0f, 72.0f * frac, 8.0f, 3.0f);
+            }
+            text(g, db <= -60.0f ? "-inf dB" : juce::String(db, 0) + " dB",
+                 875, yy + 33.0f, 74, 14, 8.5f, subtle);
+        }
+    }
     g.setColour(violet.withAlpha(expert?.8f:.55f));
     g.drawRoundedRectangle(886,232,56,29,7,1.2f);
     g.drawLine(892,246,902,239,1.2f);
@@ -1240,6 +1274,6 @@ void SkellSpectreAudioProcessorEditor::paint(juce::Graphics& g)
          juce::Justification::centred);
     text(g,"8 SMP / FIXED",870,471,86,13,8.3f,signal.withAlpha(.85f),juce::Justification::centred);
     text(g,"AUDIO REACTIVE",870,486,86,13,8.3f,subtle,juce::Justification::centred);
-    text(g,"SKELL AUDIO  1.7",866,515,94,17,8.3f,subtle,
+    text(g,"SKELL AUDIO  1.8.4",866,515,94,17,8.3f,subtle,
          juce::Justification::centred);
 }

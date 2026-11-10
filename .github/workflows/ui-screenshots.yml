@@ -1,0 +1,41 @@
+name: SKELL SPECTRE / SkellCore real-editor screenshot regression
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ui-screenshots.yml'
+      - 'CMakeLists.txt'
+      - 'Source/**'
+      - 'tests/UIRenderer.cpp'
+      - 'tests/UISmoke.cpp'
+  pull_request:
+
+jobs:
+  screenshots:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure JUCE 8 and pinned SkellCore UI renderer
+        run: cmake -S . -B build-ui -A x64 -DSKELL_BUILD_TESTS=OFF -DSKELL_BUILD_UI_RENDERER=ON
+      - name: Compile actual editor and independent renderer tool
+        run: cmake --build build-ui --config Release --target SkellSpectreUIRenderer --parallel 2
+      - name: Capture all supported views and screenshot states
+        shell: pwsh
+        run: |
+          $renderer = Get-ChildItem build-ui -Filter SkellSpectreUIRenderer.exe -Recurse -File | Select-Object -First 1
+          if (!$renderer) { throw 'Renderer executable missing' }
+          & $renderer.FullName --output ui-screenshots
+          if ($LASTEXITCODE -ne 0) { throw "Real editor render regression failed ($LASTEXITCODE)" }
+          $pngs = @(Get-ChildItem ui-screenshots -Filter *.png)
+          if ($pngs.Count -ne 15) { throw "Expected 14 scenes + contact sheet; got $($pngs.Count)" }
+          if (!(Test-Path ui-screenshots/manifest.json)) { throw 'Missing manifest' }
+      - name: Upload actual editor screenshots, contact sheet and manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SKELL-SPECTRE-Actual-JUCE-UI-Screenshots
+          path: ui-screenshots/*
+          if-no-files-found: warn
+          retention-days: 30

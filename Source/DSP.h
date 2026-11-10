@@ -80,6 +80,9 @@ public:
         for (auto& channel : dryInputDelay) channel.fill(0.0f);
         for (auto& channel : rawInputDelay) channel.fill(0.0f);
         inputDelayIndex = 0;
+        // Force lazy crossover coefficient initialization on first audio block.
+        cachedCrossoverHz.fill(-1.0f);
+        cachedCrossoverAlpha.fill(0.0f);
         limiterGain = 1.0f; bypassSmoothed = 0.0f; hqSmoothed = 0.0f;
         smoothedSlope = 3.0f; smoothedDriveType = 0.0f;
         smoothedWidthType = 0.0f;
@@ -107,9 +110,20 @@ public:
         const std::array<float, 3> crossTarget {{ f1, f2, f3 }};
         const float targetBypass = settings.bypass ? 1.0f : 0.0f;
         const float targetHQ = settings.hq ? 1.0f : 0.0f;
+        // Avoid three expensive expm1 calls on every host block, especially
+        // in 1/16-sample low-latency buffers. Recompute only upon crossover
+        // automation; no allocations, locks or change to smoothing semantics.
         std::array<float, 3> alphaTarget {};
         for (int j = 0; j < 3; ++j)
-            alphaTarget[j] = -std::expm1(-2.0f * kPi * crossTarget[j] / static_cast<float>(sampleRate));
+        {
+            if (crossTarget[j] != cachedCrossoverHz[j])
+            {
+                cachedCrossoverHz[j] = crossTarget[j];
+                cachedCrossoverAlpha[j] = -std::expm1(-2.0f * kPi * crossTarget[j]
+                    / static_cast<float>(sampleRate));
+            }
+            alphaTarget[j] = cachedCrossoverAlpha[j];
+        }
         const float inTarget = gain(settings.inputDb), outTarget = gain(settings.outputDb);
         const float mixTarget = clampf(settings.mix * 0.01f, 0.0f, 1.0f);
         // Keep all crossover filter stages running even in Smooth mode. This
@@ -465,6 +479,8 @@ private:
     float phaseAttackCoeff = .003f;
     float smoothedIn = 1.0f, smoothedOut = 1.0f, smoothedMix = 1.0f;
     std::array<float, 3> smoothedAlpha {{ .015f, .12f, .5f }};
+    std::array<float, 3> cachedCrossoverHz {{ -1.0f, -1.0f, -1.0f }};
+    std::array<float, 3> cachedCrossoverAlpha {};
     std::array<std::array<float, 6>, kBands> smoothBand {};
     std::array<std::array<Filter, 3>, 2> split {};
     std::array<std::array<std::array<Allpass, 12>, kBands>, 2> phase {};
