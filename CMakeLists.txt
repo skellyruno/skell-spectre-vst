@@ -72,4 +72,26 @@ if(SKELL_BUILD_PLUGIN)
     target_compile_features(SkellUISmoke PRIVATE cxx_std_17)
     add_test(NAME SkellUIRegression COMMAND SkellUISmoke)
   endif()
+
+  # Visual regression harness: actual editor + processor, never included in the VST3.
+  option(SKELL_BUILD_UI_RENDERER "Build SkellCore real JUCE editor screenshot executable" OFF)
+  if(SKELL_BUILD_UI_RENDERER)
+    FetchContent_Declare(SkellCoreDependency
+      GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
+      GIT_TAG 438bc74a86a40bf54cfa8089832a477822c8ccda
+      SOURCE_SUBDIR SkellCore)
+    FetchContent_MakeAvailable(SkellCoreDependency)
+    add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
+    target_include_directories(SkellSpectreUIRenderer PRIVATE
+      "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode")
+    target_link_libraries(SkellSpectreUIRenderer PRIVATE
+      SkellSpectre SkellCore::UIRenderer
+      juce::juce_audio_utils juce::juce_audio_processors
+      juce::juce_dsp juce::juce_gui_extra)
+    target_compile_definitions(SkellSpectreUIRenderer PRIVATE
+      JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+    target_compile_features(SkellSpectreUIRenderer PRIVATE cxx_std_17)
+    add_test(NAME SkellRendererRegression
+      COMMAND SkellSpectreUIRenderer --output "${CMAKE_CURRENT_BINARY_DIR}/ui-screenshots")
+  endif()
 endif()

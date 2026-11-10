@@ -1,0 +1,47 @@
+name: SKELL SPECTRE real-editor screenshots
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Source/PluginEditor.cpp'
+      - 'Source/PluginEditor.h'
+      - 'Source/PluginProcessor.cpp'
+      - 'Source/PluginProcessor.h'
+      - 'CMakeLists.txt'
+      - 'tests/UIRenderer.cpp'
+      - '.github/workflows/ui-screenshots.yml'
+  pull_request:
+    paths:
+      - 'Source/PluginEditor.cpp'
+      - 'Source/PluginEditor.h'
+      - 'Source/PluginProcessor.cpp'
+      - 'Source/PluginProcessor.h'
+      - 'CMakeLists.txt'
+      - 'tests/UIRenderer.cpp'
+      - '.github/workflows/ui-screenshots.yml'
+
+jobs:
+  screenshots:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure pinned JUCE and SkellCore
+        run: cmake -S . -B build-ui -A x64 -DSKELL_BUILD_TESTS=ON -DSKELL_BUILD_UI_RENDERER=ON
+      - name: Build actual editor and renderer
+        run: cmake --build build-ui --config Release --target SkellSpectreUIRenderer --parallel 2
+      - name: Render every supported Reactor UI scene
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build-ui -File -Recurse -Filter 'SkellSpectreUIRenderer.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'SkellCore renderer exe missing' }
+          & $exe.FullName --output "$env:GITHUB_WORKSPACE/ui-screenshots"
+          if ($LASTEXITCODE -ne 0) { throw "SkellCore renderer failed ($LASTEXITCODE)" }
+          if (-not (Test-Path ui-screenshots/contact-sheet.png)) { throw 'Contact sheet missing' }
+      - name: Upload screenshots, contact sheet and manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SKELL-SPECTRE-Real-UI-Screenshots
+          path: ui-screenshots/
+          if-no-files-found: warn
