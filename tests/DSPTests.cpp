@@ -217,6 +217,59 @@ int main()
         }
     }
 
+    // Limiter release is smooth rather than stepping from the ceiling to an
+    // unattenuated, sustained hot signal at the automation boundary. Enabling
+    // must restore the sample-peak guarantee immediately.
+    {
+        skell::Engine ceiling;
+        ceiling.prepare(48000.0);
+        skell::Settings p;
+        p.limiter = true;
+        std::vector<float> audio(5000, 1.2f);
+        float* ch[] = { audio.data() };
+        ceiling.process(ch, 1, 5000, p);
+        SKELL_CHECK(std::abs(audio.back() - .985f) < 0.0001f);
+        p.limiter = false;
+        float previous = audio.back();
+        float maxStep = 0.0f;
+        for (int i=0; i<2400; ++i)
+        {
+            float sample = 1.2f;
+            float* v[] = { &sample };
+            ceiling.process(v, 1, 1, p);
+            SKELL_CHECK(std::isfinite(sample));
+            maxStep = std::max(maxStep, std::abs(sample - previous));
+            previous = sample;
+        }
+        std::cout << "Limiter release maximum adjacent step: " << maxStep << '\n';
+        SKELL_CHECK(maxStep < .01f);
+        SKELL_CHECK(previous > 1.19f); // no permanent attenuation once disabled
+        p.limiter = true;
+        float sample = 1.2f;
+        float* v[] = { &sample };
+        ceiling.process(v, 1, 1, p);
+        SKELL_CHECK(sample <= .985001f);
+    }
+
+    // HQ processing must tolerate hot toggles even after its FIR memories
+    // have been idle. This also checks all output samples for non-finite values.
+    {
+        skell::Engine hq;
+        hq.prepare(44100.0);
+        skell::Settings p;
+        p.limiter = true;
+        for (auto& b : p.bands) b.drive = 87.0f;
+        for (int i=0;i<12000;++i)
+        {
+            if (i % 401 == 0) p.hq = !p.hq;
+            float sample = .8f*std::sin(.023f*static_cast<float>(i));
+            float* ch[] = { &sample };
+            hq.process(ch, 1, 1, p);
+            SKELL_CHECK(std::isfinite(sample));
+            SKELL_CHECK(std::abs(sample) <= .985001f);
+        }
+    }
+
     // Synthetic nonlinear spectral test (7 kHz sine at 48 kHz): the 5th
     // harmonic folds to 13 kHz without oversampling. HQ must suppress it.
     {

@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include <cstddef>
 
 namespace skell
 {
@@ -24,10 +25,10 @@ public:
         {
             const int k = i - (taps - 1) / 2;
             const float ideal = k == 0 ? .5f :
-                (k % 2 == 0 ? 0.0f : std::sin(.5f * pi * k) / (pi * k));
-            const float window = .54f - .46f * std::cos(2.0f * pi * i / (taps - 1));
-            coefficients[i] = ideal * window;
-            sum += coefficients[i];
+                (k % 2 == 0 ? 0.0f : std::sin(.5f * pi * static_cast<float>(k)) / (pi * static_cast<float>(k)));
+            const float window = .54f - .46f * std::cos(2.0f * pi * static_cast<float>(i) / static_cast<float>(taps - 1));
+            coefficients[static_cast<std::size_t>(i)] = ideal * window;
+            sum += coefficients[static_cast<std::size_t>(i)];
         }
         for (auto& x : coefficients) x /= sum;
         reset();
@@ -42,8 +43,8 @@ public:
     // Sample of the unprocessed signal, delayed by exactly the FIR's latency.
     float delayDry(float input) noexcept
     {
-        const float delayed = direct[dryPosition];
-        direct[dryPosition] = input;
+        const float delayed = direct[static_cast<std::size_t>(dryPosition)];
+        direct[static_cast<std::size_t>(dryPosition)] = input;
         dryPosition = (dryPosition + 1) % latency;
         return delayed;
     }
@@ -65,12 +66,12 @@ public:
 private:
     float upsample(float x) noexcept
     {
-        up[upPosition] = x;
+        up[static_cast<std::size_t>(upPosition)] = x;
         float y = 0.0f;
         int pos = upPosition;
         for (int i = 0; i < taps; ++i)
         {
-            y += coefficients[i] * up[pos];
+            y += coefficients[static_cast<std::size_t>(i)] * up[static_cast<std::size_t>(pos)];
             pos = pos == 0 ? taps - 1 : pos - 1;
         }
         upPosition = (upPosition + 1) % taps;
@@ -79,12 +80,12 @@ private:
 
     float downsample(float x) noexcept
     {
-        down[downPosition] = x;
+        down[static_cast<std::size_t>(downPosition)] = x;
         float y = 0.0f;
         int pos = downPosition;
         for (int i = 0; i < taps; ++i)
         {
-            y += coefficients[i] * down[pos];
+            y += coefficients[static_cast<std::size_t>(i)] * down[static_cast<std::size_t>(pos)];
             pos = pos == 0 ? taps - 1 : pos - 1;
         }
         downPosition = (downPosition + 1) % taps;

@@ -1,6 +1,6 @@
 # SKELL SPECTRE — shipping checklist
 
-The v1.7 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
+The v1.8 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
 
 ## Must-pass build and host checks
 
@@ -17,11 +17,20 @@ The v1.7 source is a development candidate, **not a verified commercial-ready re
 - [x] Warm filter taps and smooth slope transitions when host automation changes the crossover mode (v1.5).
 - [ ] Higher-order / selectable 4x and 8x true anti-aliasing with measured passband/stopband and latency.
 - [ ] Calibrated true-peak lookahead limiter as a separate processing mode, including sample-rate dependent delay.
-- [ ] State serialization of both A/B snapshots and reliable host undo/redo around snapshot changes.
+- [x] Serialize and restore both A/B snapshots without recursive state growth (v1.8).
+- [ ] Validate host undo/redo around A/B snapshot changes in FL Studio.
 - [ ] A custom user-preset library/browser with favorite/tag/search features and safe atomic save operations across platforms.
 - [ ] Accessibility review (full focus traversal, UI contrast, accessible control descriptions).
 - [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
+
+## v1.8 completed and pending checks
+
+- [x] A/B snapshot state survives editor closure and host session serialization (source and Windows UI smoke test added).
+- [x] Gradual limiter disable and HQ oversampler warm-up implemented with DSP regression coverage.
+- [x] Add Windows offscreen GUI smoke test for Character and Expert views at minimum, default and maximum sizes.
+- [ ] Validate a full JUCE Windows VST3 compile and run the GUI smoke test on GitHub Actions.
+- [ ] FL Studio real-host opening, closing, project recall and A/B comparison sessions remain unverified.
 
 ## v1.7 completed checks
 

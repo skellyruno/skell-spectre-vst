@@ -89,6 +89,8 @@ public:
         autoGainSmoothed = 1.0f;
         autoGainTarget = 1.0f;
         autoGainCountdown = 0;
+        limiterBlend = 0.0f;
+        hqReady.fill(0);
         initialized = false;
     }
 
@@ -132,6 +134,7 @@ public:
             smoothedWidthType = targetWidthType;
             bypassSmoothed = targetBypass;
             hqSmoothed = targetHQ;
+            limiterBlend = settings.limiter ? 1.0f : 0.0f;
             smoothedIn = inTarget;
             smoothedOut = outTarget;
             smoothedMix = mixTarget;
@@ -156,6 +159,10 @@ public:
             smoothedMix += smoothing * (mixTarget - smoothedMix);
             bypassSmoothed += bypassCoeff * (targetBypass - bypassSmoothed);
             hqSmoothed += bypassCoeff * (targetHQ - hqSmoothed);
+            // When disabling the ceiling, release the limited signal smoothly.
+            // Enabling protects immediately; bypass of the limiter never alters PDC.
+            const float targetLimiter = settings.limiter ? 1.0f : 0.0f;
+            limiterBlend += bypassCoeff * (targetLimiter - limiterBlend);
             smoothedSlope += smoothing * (targetSlope - smoothedSlope);
             smoothedDriveType += bypassCoeff * (targetDriveType - smoothedDriveType);
             // The Spread / Haas / Mid-Side selector now morphs over ~10 ms;
@@ -228,6 +235,7 @@ public:
                 // 8-sample latency whether HQ is enabled or not.
                 float delayedBand[2] = {};
                 float driven[2] = {};
+                bool usedHQ = false;
                 for (int c = 0; c < numChannels; ++c)
                 {
                     auto& os = oversamplers[c][b];
@@ -246,10 +254,15 @@ public:
                             // Crossfade the filtered nonlinear path, not the direct
                             // passband, to preserve exact unity when Drive is zero.
                             highQuality = delayedBand[c] + drive * (oversampled - delayedBand[c]);
+                            usedHQ = true;
                         }
-                        driven[c] = native + hqSmoothed * (highQuality - native);
+                        // New HQ voices must warm their FIR memory before an
+                        // inactive oversampler contributes fully to output.
+                        const float warm = std::min(1.0f, static_cast<float>(hqReady[b]) / 16.0f);
+                        driven[c] = native + (hqSmoothed * warm) * (highQuality - native);
                     }
                 }
+                hqReady[b] = usedHQ ? std::min(hqReady[b] + 1, 16) : 0;
                 const float absBand = numChannels == 2 ?
                     0.5f * (std::abs(delayedBand[0]) + std::abs(delayedBand[1])) : std::abs(delayedBand[0]);
                 auto& e = envelope[b];
@@ -368,8 +381,10 @@ public:
                 limiterGain + limiterRelease * (needed - limiterGain);
             for (int c = 0; c < numChannels; ++c)
             {
-                const float limited = settings.limiter ?
-                    clampf(preLimit[c] * limiterGain, -.985f, .985f) : preLimit[c];
+                const float ceiling = clampf(preLimit[c] * limiterGain, -.985f, .985f);
+                const float selected = preLimit[c] + limiterBlend * (ceiling - preLimit[c]);
+                // Retain the sample-peak contract whenever the switch is on.
+                const float limited = settings.limiter ? clampf(selected, -.985f, .985f) : selected;
                 const float out = limited + bypassSmoothed * (rawDelayed[c] - limited);
                 channels[c][i] = std::isfinite(out) ? out : 0.0f;
             }
@@ -422,11 +437,12 @@ private:
     std::array<std::array<float, 12>, kBands> phaseCoefficient {};
     std::array<Delay, kBands> delays {};
     std::array<float, kBands> sideLow {}, phaseReady {};
+    std::array<int, kBands> hqReady {};
     std::array<float, kBands> audibleSmoothed {{ 1, 1, 1, 1 }};
     std::array<std::array<DriveOversampler, kBands>, 2> oversamplers {};
     std::array<std::array<float, DriveOversampler::latency>, 2> dryInputDelay {}, rawInputDelay {};
     int inputDelayIndex = 0;
-    float bypassSmoothed = 0.0f, hqSmoothed = 0.0f, limiterGain = 1.0f;
+    float bypassSmoothed = 0.0f, hqSmoothed = 0.0f, limiterGain = 1.0f, limiterBlend = 0.0f;
     float smoothedSlope = 3.0f, smoothedDriveType = 0.0f, smoothedWidthType = 0.0f;
     int delaySamples = 288, delayIndex = 0;
     float rmsIn = .001f, rmsOut = .001f, autoGainSmoothed = 1.0f;

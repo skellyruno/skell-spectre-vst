@@ -1,5 +1,14 @@
 # Change log — SKELL SPECTRE
 
+## v1.8.0 — 2026-11-10
+
+- Serialize A/B comparison snapshots inside the host-restored plugin state without recursive metadata.
+- Keep A/B selections through plugin editor closure, reopening and DAW session restoration.
+- Warm inactive HQ oversampler filters before fully fading in driven output; preserve fixed eight-sample latency.
+- Smooth release of the sample-peak limiter when switched off; maintain immediate ceiling when switched on.
+- Add Windows-only JUCE UI regression tests for renderer/layout at three sizes, A/B controls and persistence, plus DSP automation checks.
+- Clean up FIR indexing and conversion warnings without changing filter coefficients.
+
 ## v1.7.0 — 2026-11-07
 
 - Reduce Auto Gain square-root target updates to once per 16 audio samples; keep the 350 ms RMS smoothing and block-partition consistency.

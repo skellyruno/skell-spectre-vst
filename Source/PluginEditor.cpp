@@ -12,6 +12,33 @@ const auto bone = juce::Colour::fromRGB(219, 217, 217);
 const auto subtle = juce::Colour::fromRGB(126, 126, 148);
 const auto active = juce::Colour::fromRGB(193, 165, 255);
 const auto signal = juce::Colour::fromRGB(118, 232, 181);
+// A/B state lives in APVTS root properties, so it survives editor closure
+// and DAW session restoration. Snapshot serialization strips its own metadata
+// to avoid recursive state growth on successive A/B switches.
+const juce::Identifier abA { "skellAB_A" };
+const juce::Identifier abB { "skellAB_B" };
+const juce::Identifier abSelected { "skellAB_selected" };
+
+juce::ValueTree stripABState(juce::ValueTree copy)
+{
+    copy.removeProperty(abA, nullptr);
+    copy.removeProperty(abB, nullptr);
+    copy.removeProperty(abSelected, nullptr);
+    return copy;
+}
+juce::String encodeAB(const juce::ValueTree& tree)
+{
+    auto xml = tree.createXml();
+    return xml != nullptr ? xml->toString() : juce::String();
+}
+juce::ValueTree decodeAB(const juce::var& encoded)
+{
+    const auto serialized = encoded.toString();
+    if (serialized.isEmpty() || serialized.length() > 1000000) return {};
+    auto xml = juce::parseXML(serialized);
+    if (xml == nullptr || !xml->hasTagName("SKELL_STATE")) return {};
+    return stripABState(juce::ValueTree::fromXml(*xml));
+}
 
 juce::Rectangle<int> scaled(float x, float y, float w, float h, float s)
 {
@@ -751,8 +778,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     previousBasic=processor.parameter("basic")>.5f;
     showingExpert=!previousBasic; // host-restored Expert sessions open in Expert view
     for (int k=0;k<4;++k) bindMacro(k,0);
-    snapshots[0]=processor.parameters.copyState();
-    snapshots[1]=snapshots[0].createCopy();
+    restoreAB();
     setModeStyle();
     setResizable(true,true);
     getConstrainer()->setFixedAspectRatio(960.0/540.0);
@@ -764,6 +790,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
 SkellSpectreAudioProcessorEditor::~SkellSpectreAudioProcessorEditor()
 {
     stopTimer();
+    persistAB();
     processor.setVisualizationActive(false);
     for (auto& attachment:macroAttachments) attachment.reset();
     comboAttachments.clear();
@@ -810,12 +837,45 @@ void SkellSpectreAudioProcessorEditor::setModeStyle()
     slotA.setToggleState(currentAB==0,juce::dontSendNotification);
     slotB.setToggleState(currentAB==1,juce::dontSendNotification);
 }
+juce::ValueTree SkellSpectreAudioProcessorEditor::captureABState() const
+{
+    return stripABState(processor.parameters.copyState());
+}
+
+void SkellSpectreAudioProcessorEditor::persistAB()
+{
+    snapshots[currentAB] = captureABState();
+    auto& state = processor.parameters.state;
+    state.setProperty(abA, encodeAB(snapshots[0]), nullptr);
+    state.setProperty(abB, encodeAB(snapshots[1]), nullptr);
+    state.setProperty(abSelected, currentAB, nullptr);
+}
+
+void SkellSpectreAudioProcessorEditor::restoreAB()
+{
+    const auto state = processor.parameters.copyState();
+    currentAB = juce::jlimit(0, 1, static_cast<int>(state.getProperty(abSelected, 0)));
+    const auto active = stripABState(state.createCopy());
+    snapshots[0] = decodeAB(state.getProperty(abA));
+    snapshots[1] = decodeAB(state.getProperty(abB));
+    // The active slot is the authoritative host-restored parameter state.
+    snapshots[currentAB] = active;
+    if (!snapshots[1 - currentAB].isValid())
+        snapshots[1 - currentAB] = active.createCopy();
+    persistAB();
+}
+
 void SkellSpectreAudioProcessorEditor::changeAB(int index)
 {
-    if(index==currentAB) return;
-    snapshots[currentAB]=processor.parameters.copyState();
-    currentAB=index;
-    processor.parameters.replaceState(snapshots[index].createCopy());
+    if (index < 0 || index > 1 || index == currentAB) return;
+    persistAB();
+    currentAB = index;
+    // Preserve the two snapshots as metadata while replacing live parameters.
+    auto next = snapshots[index].createCopy();
+    next.setProperty(abA, encodeAB(snapshots[0]), nullptr);
+    next.setProperty(abB, encodeAB(snapshots[1]), nullptr);
+    next.setProperty(abSelected, index, nullptr);
+    processor.parameters.replaceState(next);
     const bool basic=processor.parameter("basic")>.5f;
     for (int k=0;k<4;++k) bindMacro(k,0);
     showingExpert=!basic;
@@ -824,9 +884,17 @@ void SkellSpectreAudioProcessorEditor::changeAB(int index)
 }
 void SkellSpectreAudioProcessorEditor::copyAToB()
 {
-    if(currentAB==0) snapshots[0]=processor.parameters.copyState();
-    snapshots[1]=snapshots[0].createCopy();
-    if(currentAB==1) processor.parameters.replaceState(snapshots[1].createCopy());
+    if (currentAB == 0) snapshots[0] = captureABState();
+    snapshots[1] = snapshots[0].createCopy();
+    if (currentAB == 1)
+    {
+        auto next = snapshots[1].createCopy();
+        next.setProperty(abA, encodeAB(snapshots[0]), nullptr);
+        next.setProperty(abB, encodeAB(snapshots[1]), nullptr);
+        next.setProperty(abSelected, 1, nullptr);
+        processor.parameters.replaceState(next);
+    }
+    persistAB();
     repaint();
 }
 
@@ -847,6 +915,7 @@ void SkellSpectreAudioProcessorEditor::saveUserPreset()
             if (file==juce::File{}) return;
             if (!file.hasFileExtension(".skellpreset")) file=file.withFileExtension(".skellpreset");
             juce::MemoryBlock data;
+            safe->persistAB();
             safe->processor.getStateInformation(data);
             const bool saved=file.replaceWithData(data.getData(), data.getSize());
             if (!saved)
@@ -885,6 +954,7 @@ void SkellSpectreAudioProcessorEditor::loadUserPreset()
                 return;
             }
             safe->processor.setStateInformation(data.getData(),static_cast<int>(data.getSize()));
+            safe->restoreAB();
             safe->processor.parameters.state.setProperty("presetIndex",-1,nullptr);
             for (int k=0;k<4;++k) safe->bindMacro(k,0);
             safe->showingExpert=safe->processor.parameter("basic")<.5f;

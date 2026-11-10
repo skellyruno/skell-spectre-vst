@@ -102,6 +102,9 @@ private:
     void setModeStyle();
     void changeAB(int);
     void copyAToB();
+    void restoreAB();
+    void persistAB();
+    juce::ValueTree captureABState() const;
     void saveUserPreset();
     void loadUserPreset();
 

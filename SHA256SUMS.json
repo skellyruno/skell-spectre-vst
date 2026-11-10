@@ -1,22 +1,23 @@
 {
-  "release": "1.7.0",
+  "release": "1.8.0",
   "sha256": {
     ".github/workflows/build.yml": "a33f9c90e5059b51c0d1ce69d41e13f6450101366d1de0c1e1150f297039e04e",
     ".gitignore": "604e05abfb94a0c88f2cad6e2f034948564dce7515cb03e7449f9dcc2dc939f4",
     "BUILD-FIXES.md": "ac444e5e9fcb5ffb8c2afb9c8f452494374de13fca51523a7a0a6d6bd9a221aa",
     "BUILD-WINDOWS.ps1": "02b6d64f3bc917f6224923be0a043a377184b3cc68914b62d9956720a8d486da",
-    "CHANGELOG.md": "c08e40dbc3552e817a7087adf78eefee750b8ea5df23505b7941fa8dece78e29",
-    "CMakeLists.txt": "e7b440deb61c8ad732439906218eb36092712d36f82d3a2732aa97de9dd37d1e",
-    "README.md": "ff091626dd6155cb2b377ffe98dd8ad89df3f1221ea9b7b483c9e170bf9fa520",
-    "RELEASE-CHECKLIST.md": "8861907ab92706fd8ff1f684b3fd921736e31c8ad26bb9fefa93444e771131b1",
-    "Source/DSP.h": "17b6b94e2a2d5ab5105f127cc3ad581bdc749b3ff5acd8c70ba8d17327693664",
-    "Source/DriveOversampler.h": "efdede517d1fbef594ec9b3cfb7c2e49db95a5a881bec37eafbe920e665c4f74",
-    "Source/PluginEditor.cpp": "2bd9da7d0359b24185ded93983630789363d8ff23265c692a9cf8c57c18ba7e3",
-    "Source/PluginEditor.h": "f674c84ed1757c1d9212cfad9eab213de39ea298518b1929d657f0314fa79c36",
+    "CHANGELOG.md": "0f518d34a4fc65e54b7652613481dab1a846c4d4347c5d3f5184531312c938d7",
+    "CMakeLists.txt": "c7afedd4f9961fb68932210c6f3c7c9494654b406423260ec84e237f7bade354",
+    "README.md": "890721eb4c41a06c8ab1282d0f6d3716ac2f6eb92ede42c114be8e2af057ee11",
+    "RELEASE-CHECKLIST.md": "f7e58f4f6c4f1813c4a9d74e8bb794790ddd0f8196442f40eb643bb2725d6a84",
+    "Source/DSP.h": "baea1089d07de6c551fdb48702b44b43d58b046a779f7193ec3aa4a69fdda8ae",
+    "Source/DriveOversampler.h": "e59a4423af6a0d05b2b68df55150c343a5c0d8f4f3b8165919e1844d2d0356ff",
+    "Source/PluginEditor.cpp": "58f876dda97f90d2df0260837d195fa6bda58a190cadb843a34244296295191c",
+    "Source/PluginEditor.h": "3696a24873e43f0ec7c308a43674627bf201ae563031f42cefd5dc668f0a0ee8",
     "Source/PluginProcessor.cpp": "3eda5b8c3deaa63ff3df1b12c07610e5d9806b1cb2f3323e093ec51a3a5b41ff",
     "Source/PluginProcessor.h": "7ebc191b629fc55887d39bbea6aa12bb11b0a615fc1e74a56372cb8476e6749f",
     "docs/logo.svg": "4cb8cc78e92d8ae34f8aa4164f3444720b8eaacab908bce8114813554e03fcc9",
     "tests/DSPBenchmark.cpp": "1c57e7e7e6eb644496d6502d7339faaa3c8db1327959dc7fa199010a417ec145",
-    "tests/DSPTests.cpp": "db42f9dd7d48347c4f7025f3dc75030384c82bbc876779fd3af1ebfc333e26f0"
+    "tests/DSPTests.cpp": "7e43e257773db6049756f769611393d5c58aa20279f3a8081e1c4764c8007e29",
+    "tests/UISmoke.cpp": "142c8bb1adfc9de5910d454c33f113cd5425b6e8a3f9ba0774c54571e237dfe0"
   }
 }

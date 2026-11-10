@@ -1,10 +1,20 @@
-# SKELL SPECTRE v1.7 — Reactor Pro
+# SKELL SPECTRE v1.8 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-## New in v1.7 (November 7, 2026)
+## New in v1.8 (November 10, 2026)
+
+- **Persistent A/B snapshots:** A/B states are serialized as non-recursive APVTS metadata, so closing/reopening the editor and saving/reopening a DAW session preserve both slots. Old sessions with no A/B metadata still load with the existing sound and initialize the unused slot safely.
+- **Safer limiter switching:** disabling the sample-peak limiter fades from the limited to the unlimited path while enabling applies the configured ceiling immediately. This is not true-peak limiting.
+- **HQ warm-up:** after oversampling has been idle, 2x HQ saturation fades in over 16 processed samples instead of exposing a cold FIR history abruptly; latency remains fixed at eight samples.
+- **Offscreen JUCE GUI tests:** Windows CI now renders the Character and Expert editors at 704×396, 880×495, and 1440×810, verifies visible child bounds, and exercises A/B switching and host-state restoration. This does **not** replace FL Studio in-host testing.
+- **Regression coverage:** sustained-signal limiter release, rapid HQ toggles, fixed sample-peak ceiling, and existing aliasing, silence, mono, block-size and saturation tests.
+
+Compatibility: no parameter IDs, manufacturer/plugin IDs (`SkAu`/`Spct`), factory presets, or reported eight-sample latency have changed. CMake project version is 1.8.0.
+
+## Previously added in v1.7 (November 7, 2026)
 
 - **Lower Audio Thread overhead:** Auto Gain RMS ratios are recomputed once every 16 samples instead of every sample, with continuous 350 ms level smoothing. The phase of the update is persistent across host audio blocks, so output stays block-size-independent.
 - **Zero FFT/peak-capture work while the editor is closed:** the processor reference-counts active editor visualizations. When there are none, it processes identical audio without FFT ring-buffer writes, magnitude scans, or UI-meter updates. This helps sessions with many plugin instances.
