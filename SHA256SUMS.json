@@ -1,15 +1,15 @@
 {
-  "release": "1.8.0",
+  "release": "1.8.1",
   "sha256": {
     ".github/workflows/build.yml": "a33f9c90e5059b51c0d1ce69d41e13f6450101366d1de0c1e1150f297039e04e",
     ".gitignore": "604e05abfb94a0c88f2cad6e2f034948564dce7515cb03e7449f9dcc2dc939f4",
     "BUILD-FIXES.md": "ac444e5e9fcb5ffb8c2afb9c8f452494374de13fca51523a7a0a6d6bd9a221aa",
     "BUILD-WINDOWS.ps1": "02b6d64f3bc917f6224923be0a043a377184b3cc68914b62d9956720a8d486da",
-    "CHANGELOG.md": "0f518d34a4fc65e54b7652613481dab1a846c4d4347c5d3f5184531312c938d7",
-    "CMakeLists.txt": "c7afedd4f9961fb68932210c6f3c7c9494654b406423260ec84e237f7bade354",
-    "README.md": "890721eb4c41a06c8ab1282d0f6d3716ac2f6eb92ede42c114be8e2af057ee11",
-    "RELEASE-CHECKLIST.md": "f7e58f4f6c4f1813c4a9d74e8bb794790ddd0f8196442f40eb643bb2725d6a84",
-    "Source/DSP.h": "baea1089d07de6c551fdb48702b44b43d58b046a779f7193ec3aa4a69fdda8ae",
+    "CHANGELOG.md": "f52945e54d906758ff28d07b877e9fce38c2bf9cc511703f959643a0b9dda44b",
+    "CMakeLists.txt": "137733b41c38283b857dfc8350eb52f71aecbbc9d2261f922399446008f25c14",
+    "README.md": "22512e5a4113b02f1dddad416c346985ed8c1a492e1311d574c1162411af876e",
+    "RELEASE-CHECKLIST.md": "a6eaadd79bc4a2a05fe356e021be67adf75fa838da929ab70d05f58d2b577753",
+    "Source/DSP.h": "6f93e946337a44004a093b3f190f0e2bca78a5853f47332616b5055701ead3d2",
     "Source/DriveOversampler.h": "e59a4423af6a0d05b2b68df55150c343a5c0d8f4f3b8165919e1844d2d0356ff",
     "Source/PluginEditor.cpp": "58f876dda97f90d2df0260837d195fa6bda58a190cadb843a34244296295191c",
     "Source/PluginEditor.h": "3696a24873e43f0ec7c308a43674627bf201ae563031f42cefd5dc668f0a0ee8",
@@ -17,7 +17,7 @@
     "Source/PluginProcessor.h": "7ebc191b629fc55887d39bbea6aa12bb11b0a615fc1e74a56372cb8476e6749f",
     "docs/logo.svg": "4cb8cc78e92d8ae34f8aa4164f3444720b8eaacab908bce8114813554e03fcc9",
     "tests/DSPBenchmark.cpp": "1c57e7e7e6eb644496d6502d7339faaa3c8db1327959dc7fa199010a417ec145",
-    "tests/DSPTests.cpp": "7e43e257773db6049756f769611393d5c58aa20279f3a8081e1c4764c8007e29",
+    "tests/DSPTests.cpp": "e63a5d0f52fe143a5c05a242aa87d20d2c7fdff8217cf9af6d88b16b94c3cb30",
     "tests/UISmoke.cpp": "142c8bb1adfc9de5910d454c33f113cd5425b6e8a3f9ba0774c54571e237dfe0"
   }
 }

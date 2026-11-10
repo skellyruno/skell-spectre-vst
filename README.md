@@ -1,10 +1,16 @@
-# SKELL SPECTRE v1.8 — Reactor Pro
+# SKELL SPECTRE v1.8.1 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-## New in v1.8 (November 10, 2026)
+## Fixes in v1.8.1 (November 10, 2026)
+
+- Windows UI smoke target now generates `JuceHeader.h` for itself, fixing the build failure on the initial v1.8 push.
+- Slow DSP silence tails now flush subnormal persistent filter states periodically and suppress output below −400 dBFS. This extends denormal safety beyond hosts that set FTZ/DAZ.
+- Regression checks run 240,000-sample impulse tails at 44.1 and 192 kHz; the 8-sample latency, preset format and parameter IDs remain unchanged.
+
+## Previously added in v1.8 (November 10, 2026)
 
 - **Persistent A/B snapshots:** A/B states are serialized as non-recursive APVTS metadata, so closing/reopening the editor and saving/reopening a DAW session preserve both slots. Old sessions with no A/B metadata still load with the existing sound and initialize the unused slot safely.
 - **Safer limiter switching:** disabling the sample-peak limiter fades from the limited to the unlimited path while enabling applies the configured ceiling immediately. This is not true-peak limiting.

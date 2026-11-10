@@ -1,5 +1,11 @@
 # Change log — SKELL SPECTRE
 
+## v1.8.1 — 2026-11-10
+
+- Fix the Windows `SkellUISmoke` build target's missing JUCE-generated header by generating it per target and linking the GUI dependencies.
+- Flush inaudible IIR states periodically and zero subnormal output, so long silence tails stay denormal-free even outside JUCE's FTZ/DAZ guard.
+- Add 44.1/192 kHz long-tail regression tests and confirm no audible-range change or measurable synthetic CPU regression.
+
 ## v1.8.0 — 2026-11-10
 
 - Serialize A/B comparison snapshots inside the host-restored plugin state without recursive metadata.

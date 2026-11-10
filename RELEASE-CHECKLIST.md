@@ -1,6 +1,6 @@
 # SKELL SPECTRE — shipping checklist
 
-The v1.8 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
+The v1.8.1 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
 
 ## Must-pass build and host checks
 
@@ -23,6 +23,12 @@ The v1.8 source is a development candidate, **not a verified commercial-ready re
 - [ ] Accessibility review (full focus traversal, UI contrast, accessible control descriptions).
 - [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
+
+## v1.8.1 completed checks
+
+- [x] Fix JUCE generated-header dependencies for the Windows UI smoke test target.
+- [x] 240,000-sample long-tail tests at 44.1 and 192 kHz yield no subnormal output from the standalone DSP engine.
+- [ ] Windows VST3 + Windows GUI smoke CI build and FL Studio session stress remain required.
 
 ## v1.8 completed and pending checks
 

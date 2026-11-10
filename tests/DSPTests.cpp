@@ -270,6 +270,32 @@ int main()
         }
     }
 
+    // The standalone DSP engine must not emit denormal/subnormal values after
+    // long silence tails, even without a DAW's FTZ/DAZ guard. Maintain the
+    // fixed latency and normal processing behavior for audible samples.
+    for (double rate : { 44100.0, 192000.0 })
+    {
+        skell::Engine tail;
+        tail.prepare(rate);
+        skell::Settings p;
+        p.hq = true;
+        p.limiter = false;
+        for (auto& band : p.bands)
+        {
+            band.drive = 70.0f;
+            band.diffuse = 80.0f;
+            band.punch = 90.0f;
+        }
+        for (int i=0; i<240000; ++i)
+        {
+            float sample = i == 0 ? .9f : 0.0f;
+            float* channels[] = { &sample };
+            tail.process(channels, 1, 1, p);
+            SKELL_CHECK(std::isfinite(sample));
+            SKELL_CHECK(std::fpclassify(sample) != FP_SUBNORMAL);
+        }
+    }
+
     // Synthetic nonlinear spectral test (7 kHz sine at 48 kHz): the 5th
     // harmonic folds to 13 kHz without oversampling. HQ must suppress it.
     {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SkellSpectre VERSION 1.8.0 LANGUAGES C CXX)
+project(SkellSpectre VERSION 1.8.1 LANGUAGES C CXX)
 
 # Retains the SKELL quickstart's JUCE_PATH override and pinned JUCE 8.0.12,
 # along with its unique manufacturer namespace and Windows VST3 workflow.
@@ -62,7 +62,12 @@ if(SKELL_BUILD_PLUGIN)
   # Exercise actual offscreen JUCE rendering and A/B state restore on Windows CI.
   if(WIN32 AND SKELL_BUILD_TESTS)
     add_executable(SkellUISmoke tests/UISmoke.cpp)
-    target_link_libraries(SkellUISmoke PRIVATE SkellSpectre)
+    # JUCE's generated compatibility header belongs to each CMake target.
+    # Linking the plugin core alone does not export its private JuceHeader.h.
+    target_link_libraries(SkellUISmoke PRIVATE SkellSpectre
+      juce::juce_audio_utils juce::juce_audio_processors
+      juce::juce_dsp juce::juce_gui_extra)
+    juce_generate_juce_header(SkellUISmoke)
     target_compile_features(SkellUISmoke PRIVATE cxx_std_17)
     add_test(NAME SkellUIRegression COMMAND SkellUISmoke)
   endif()

@@ -90,6 +90,7 @@ public:
         autoGainTarget = 1.0f;
         autoGainCountdown = 0;
         limiterBlend = 0.0f;
+        denormalTick = 0;
         hqReady.fill(0);
         initialized = false;
     }
@@ -386,14 +387,48 @@ public:
                 // Retain the sample-peak contract whenever the switch is on.
                 const float limited = settings.limiter ? clampf(selected, -.985f, .985f) : selected;
                 const float out = limited + bypassSmoothed * (rawDelayed[c] - limited);
-                channels[c][i] = std::isfinite(out) ? out : 0.0f;
+                // Suppress subnormal output after very long impulse tails.
+                // -400 dBFS is far below any useful audio precision.
+                channels[c][i] = std::isfinite(out) && std::abs(out) >= 1.0e-20f ? out : 0.0f;
             }
             delayIndex = (delayIndex + 1) % 8192;
             inputDelayIndex = (inputDelayIndex + 1) % DriveOversampler::latency;
+            // In addition to JUCE's ScopedNoDenormals, keep this standalone
+            // engine free of tiny IIR states even when tested or embedded
+            // without CPU FTZ/DAZ mode. Once per 64 samples limits overhead.
+            if ((++denormalTick & 63) == 0) flushInaudibleState();
         }
     }
 
 private:
+    static void flushTiny(float& value) noexcept
+    {
+        if (std::abs(value) < 1.0e-20f) value = 0.0f;
+    }
+    void flushInaudibleState() noexcept
+    {
+        for (auto& channel : split)
+            for (auto& crossover : channel)
+                for (auto& state : crossover.states) flushTiny(state);
+        for (auto& channel : phase)
+            for (auto& band : channel)
+                for (auto& stage : band) flushTiny(stage.z);
+        for (auto& band : envelope)
+        {
+            flushTiny(band.fast);
+            flushTiny(band.slow);
+        }
+        for (auto& v : sideLow) flushTiny(v);
+        for (auto& v : phaseReady) flushTiny(v);
+        for (auto& v : audibleSmoothed) flushTiny(v);
+        flushTiny(rmsIn);
+        flushTiny(rmsOut);
+        flushTiny(hqSmoothed);
+        flushTiny(bypassSmoothed);
+        flushTiny(smoothedSlope);
+        flushTiny(smoothedDriveType);
+        flushTiny(smoothedWidthType);
+    }
     struct Filter { std::array<float, 8> states {}; };
     struct Allpass { float z = 0.0f; };
     struct Envelope { float fast = 0.0f, slow = 0.0f; };
@@ -448,6 +483,7 @@ private:
     float rmsIn = .001f, rmsOut = .001f, autoGainSmoothed = 1.0f;
     float autoGainTarget = 1.0f;
     int autoGainCountdown = 0;
+    int denormalTick = 0;
     bool initialized = false;
 };
 }
