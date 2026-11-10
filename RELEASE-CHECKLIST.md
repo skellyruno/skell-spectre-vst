@@ -1,6 +1,6 @@
 # SKELL SPECTRE — shipping checklist
 
-The v1.8.1 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
+The v1.8.2 source is a development candidate, **not a verified commercial-ready release**. Complete the following before shipping binaries or selling licenses.
 
 ## Must-pass build and host checks
 
@@ -23,6 +23,11 @@ The v1.8.1 source is a development candidate, **not a verified commercial-ready 
 - [ ] Accessibility review (full focus traversal, UI contrast, accessible control descriptions).
 - [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
+
+## v1.8.2 build fix
+
+- [x] Use JUCE's console app CMake helper for the UI smoke target, preserving generated `JuceHeader.h` support.
+- [ ] Windows UI compilation/runtime validation pending GitHub Actions completion.
 
 ## v1.8.1 completed checks
 

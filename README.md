@@ -1,10 +1,14 @@
-# SKELL SPECTRE v1.8.1 — Reactor Pro
+# SKELL SPECTRE v1.8.2 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
 
-## Fixes in v1.8.1 (November 10, 2026)
+## Fix in v1.8.2 (November 10, 2026)
+
+- The GUI smoke test target is now created with `juce_add_console_app`, which sets up JUCE-generated target directories correctly. This fixes the previous Windows CMake configuration failure; plugin identity and DSP remain unchanged.
+
+## Previously added in v1.8.1 (November 10, 2026)
 
 - Windows UI smoke target now generates `JuceHeader.h` for itself, fixing the build failure on the initial v1.8 push.
 - Slow DSP silence tails now flush subnormal persistent filter states periodically and suppress output below −400 dBFS. This extends denormal safety beyond hosts that set FTZ/DAZ.

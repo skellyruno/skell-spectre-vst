@@ -1,5 +1,10 @@
 # Change log — SKELL SPECTRE
 
+## v1.8.2 — 2026-11-10
+
+- Build UI regression test with `juce_add_console_app` instead of plain `add_executable`, giving the target a generated JUCE sources directory as required by `juce_generate_juce_header`.
+- Keep the editor and DSP unchanged from v1.8.1 while correcting the CMake configuration root cause.
+
 ## v1.8.1 — 2026-11-10
 
 - Fix the Windows `SkellUISmoke` build target's missing JUCE-generated header by generating it per target and linking the GUI dependencies.
