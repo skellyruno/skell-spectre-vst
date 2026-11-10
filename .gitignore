@@ -1,0 +1,9 @@
+build/
+JUCE/
+*.user
+*.vs
+.vs/
+.DS_Store
+*.vst3
+*.exe
+skell-dsp-test

@@ -35,3 +35,13 @@ restoration, and portable DSP tests remain independently built.
 snapshot cannot certify the *open* popup's geometry. Verify native popup
 appearance and mouse/keyboard interactions in a running Windows VST3 host.
 Offscreen rendering does not prove host stability or audio glitch freedom.
+
+## Renderer-discovered issues fixed
+
+The initial screenshot artifact exposed two problems that were invisible to
+compile-only tests: the Expert meter strip overpainted the right edge of band D,
+and the contact sheet saved before the graphics context flushed. The first was
+corrected in the actual JUCE paint path by moving Expert meters to the right
+mode rail; the second was corrected in the independent renderer. Minimum-size
+Expert now uses a short `SKULL` view-switch label. Button hover and disabled
+styling have explicit high-contrast treatment.

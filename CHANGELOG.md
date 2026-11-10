@@ -2,6 +2,8 @@
 
 - Pin SkellCore Headless JUCE renderer (`438bc74a86a40bf54cfa8089832a477822c8ccda`) via CMake FetchContent, only for a separate development executable.
 - Add Windows CI workflow for screenshots of the real plugin editor (14 states plus a contact sheet) and automatic bounds/visual-difference checks.
+- Fix the Expert vertical meter overlapping band D controls; relocate meters into the unused right sidebar and shorten the mode switch label to SKULL for minimum-size layouts.
+- Improve real hover/disabled button contrast and flush the contact-sheet Graphics context before saving, so the exported sheet contains rendered thumbnails.
 - Cache crossover coefficients across unchanged audio blocks; test identical results under single-sample and 96-sample partitions during automation.
 - Retain VST3 identity, state format, eight-sample latency and all existing UI pages/parameters. The shared renderer never links into VST3.
 

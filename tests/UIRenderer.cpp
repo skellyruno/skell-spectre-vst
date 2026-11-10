@@ -69,6 +69,7 @@ void createContactSheet(const juce::File& folder, const std::vector<Scene>& scen
     const int rows = (static_cast<int>(scenes.size()) + columns - 1) / columns;
     juce::Image sheet(juce::Image::RGB, columns * cellWidth,
                       rows * (shotHeight + captionHeight), true);
+    {
     juce::Graphics g(sheet);
     g.fillAll(juce::Colour::fromRGB(15, 16, 23));
     for (size_t i = 0; i < scenes.size(); ++i)
@@ -85,6 +86,13 @@ void createContactSheet(const juce::File& folder, const std::vector<Scene>& scen
         g.drawFittedText(scene.id, x + 7, y + shotHeight, cellWidth - 14,
                          captionHeight - 3, juce::Justification::centredLeft, 1);
     }
+    } // Destroy Graphics and flush the drawing context before reading pixels.
+    int varied = 0;
+    const auto base = sheet.getPixelAt(0, 0);
+    for (int y = 4; y < sheet.getHeight(); y += 17)
+        for (int x = 4; x < sheet.getWidth(); x += 17)
+            varied += sheet.getPixelAt(x, y) != base;
+    if (varied < 100) ++failures;
     if (!writePng(sheet, folder.getChildFile("contact-sheet.png"))) ++failures;
 }
 } // namespace
@@ -159,6 +167,7 @@ int main(int argc, char** argv)
             {"character-default-880", "character-band-b-880"},
             {"character-default-880", "character-slot-b-880"},
             {"character-default-880", "character-hover-hq-880"},
+            {"character-default-880", "character-disabled-hq-880"},
             {"expert-default-880", "expert-tape-880"}
         };
         auto output = juce::File::getCurrentWorkingDirectory().getChildFile(directory);

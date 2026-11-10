@@ -11,7 +11,10 @@ This is a working-source development release with an original skeleton illustrat
   SkellCore commit `438bc74a86a40bf54cfa8089832a477822c8ccda`.
 - Screenshot workflow captures Character/Expert at 704×396, 880×495 and
   1440×810 plus bypass, rail/slot selection, preset, hover/disabled, Tape
-  and muted-band states. Uploads individual PNG files, a contact sheet and
+  and muted-band states. Actual rendering inspection revealed that Expert's
+  old vertical meter overlapped band D; Expert now uses compact sidebar meters.
+  The compact mode-switch label is legible at minimum window size, and
+  hover/disabled states have explicit visual contrast. Uploads individual PNG files, a contact sheet and
   `manifest.json` on every meaningful UI source change.
 - Caches crossover filter exponentials when frequencies are unchanged,
   improving efficiency on very short host buffers without changing latency,
@@ -42,7 +45,7 @@ This is a working-source development release with an original skeleton illustrat
 - **Offscreen JUCE GUI tests:** Windows CI now renders the Character and Expert editors at 704×396, 880×495, and 1440×810, verifies visible child bounds, and exercises A/B switching and host-state restoration. This does **not** replace FL Studio in-host testing.
 - **Regression coverage:** sustained-signal limiter release, rapid HQ toggles, fixed sample-peak ceiling, and existing aliasing, silence, mono, block-size and saturation tests.
 
-Compatibility: no parameter IDs, manufacturer/plugin IDs (`SkAu`/`Spct`), factory presets, or reported eight-sample latency have changed. CMake project version is 1.8.0.
+Compatibility: no parameter IDs, manufacturer/plugin IDs (`SkAu`/`Spct`), factory presets, or reported eight-sample latency have changed. CMake project version is 1.8.4.
 
 ## Previously added in v1.7 (November 7, 2026)
 
