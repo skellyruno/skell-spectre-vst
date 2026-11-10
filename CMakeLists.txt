@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SkellSpectre VERSION 1.8.3 LANGUAGES C CXX)
+project(SkellSpectre VERSION 1.8.4 LANGUAGES C CXX)
 
 # Retains the SKELL quickstart's JUCE_PATH override and pinned JUCE 8.0.12,
 # along with its unique manufacturer namespace and Windows VST3 workflow.
@@ -72,4 +72,29 @@ if(SKELL_BUILD_PLUGIN)
     target_compile_features(SkellUISmoke PRIVATE cxx_std_17)
     add_test(NAME SkellUIRegression COMMAND SkellUISmoke)
   endif()
+endif()
+
+# Development-only, pinned shared SkellCore renderer. Never linked into the VST3.
+option(SKELL_BUILD_UI_RENDERER "Build screenshots from actual JUCE editor" OFF)
+if(SKELL_BUILD_PLUGIN AND SKELL_BUILD_UI_RENDERER)
+  include(FetchContent)
+  FetchContent_Declare(SkellCoreRendererDependency
+    GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
+    GIT_TAG 438bc74a86a40bf54cfa8089832a477822c8ccda
+    SOURCE_SUBDIR SkellCore)
+  FetchContent_MakeAvailable(SkellCoreRendererDependency)
+  if(NOT TARGET SkellCore::UIRenderer)
+    message(FATAL_ERROR "Pinned SkellCore revision is missing UIRenderer target")
+  endif()
+  # Plain executable avoids JUCE_STANDALONE_APPLICATION conflict with the
+  # plugin's shared-code object target (as in skell-preset-vst).
+  add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
+  target_include_directories(SkellSpectreUIRenderer PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode")
+  target_link_libraries(SkellSpectreUIRenderer PRIVATE
+    SkellSpectre SkellCore::UIRenderer
+    juce::juce_audio_utils juce::juce_gui_extra juce::juce_dsp)
+  target_compile_definitions(SkellSpectreUIRenderer PRIVATE
+    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+  target_compile_features(SkellSpectreUIRenderer PRIVATE cxx_std_17)
 endif()

@@ -1,8 +1,24 @@
-# SKELL SPECTRE v1.8.3 — Reactor Pro
+# SKELL SPECTRE v1.8.4 — Reactor Pro
 
 **Source project:** JUCE 8 / C++17 / CMake. Builds VST3 and Standalone on Windows. Based on the supplied Skell VST template and the existing v1.2.1 Reactor UI project, retaining the **SkAu / Spct** VST identity and previous parameter IDs for project compatibility.
 
 This is a working-source development release with an original skeleton illustration drawn by JUCE vector graphics. It is not a copy of Phantomic's binary, artwork or proprietary algorithms.
+
+## v1.8.4 — permanent SkellCore visual review (November 10, 2026)
+
+- Adds `SkellSpectreUIRenderer`: an **independent development executable** that
+  renders the real JUCE editor through `SkellCore::UIRenderer`, pinned to
+  SkellCore commit `438bc74a86a40bf54cfa8089832a477822c8ccda`.
+- Screenshot workflow captures Character/Expert at 704×396, 880×495 and
+  1440×810 plus bypass, rail/slot selection, preset, hover/disabled, Tape
+  and muted-band states. Uploads individual PNG files, a contact sheet and
+  `manifest.json` on every meaningful UI source change.
+- Caches crossover filter exponentials when frequencies are unchanged,
+  improving efficiency on very short host buffers without changing latency,
+  plugin IDs, preset IDs or DSP filter coefficients. Portable regressions verify
+  continuous versus 1-sample-block processing under crossover automation.
+- See [docs/UI_RENDERER.md](docs/UI_RENDERER.md) for the permanent build–render–inspect
+  workflow. Open JUCE popup menus and FL Studio usage still require manual host validation.
 
 ## Fix in v1.8.3 (November 10, 2026)
 

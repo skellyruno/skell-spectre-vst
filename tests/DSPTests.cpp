@@ -532,6 +532,41 @@ int main()
         SKELL_CHECK(std::abs(cl-bl)<.005f);
     }
 
+    // A cached crossover must respond to automation on the exact sample as
+    // the original per-block calculation, independent of host buffer sizes.
+    // Regression guards the no-allocation, no-exp-per-unchanged-block fast path.
+    {
+        skell::Engine fullBlock, singleSample;
+        fullBlock.prepare(48000.0);
+        singleSample.prepare(48000.0);
+        skell::Settings p;
+        p.limiter = true;
+        p.bands[1].drive = 63.0f;
+        p.bands[2].punch = 37.0f;
+        for (int block = 0; block < 40; ++block)
+        {
+            p.crossovers[0] = 55.0f + 17.0f * static_cast<float>(block % 5);
+            p.crossovers[1] = 610.0f + 88.0f * static_cast<float>(block % 7);
+            p.crossovers[2] = 3400.0f + 335.0f * static_cast<float>(block % 11);
+            std::array<float, 96> big {};
+            auto individual = big;
+            for (int i = 0; i < static_cast<int>(big.size()); ++i)
+                big[static_cast<size_t>(i)] = individual[static_cast<size_t>(i)] =
+                    .48f * std::sin(.051f * static_cast<float>(block * 96 + i));
+            float* full[] = { big.data() };
+            fullBlock.process(full, 1, static_cast<int>(big.size()), p);
+            for (auto& sample : individual)
+            {
+                float* one[] = { &sample };
+                singleSample.process(one, 1, 1, p);
+            }
+            for (int i = 0; i < static_cast<int>(big.size()); ++i)
+                SKELL_CHECK(std::abs(big[static_cast<size_t>(i)]
+                    - individual[static_cast<size_t>(i)]) < 0.000001f);
+        }
+        std::cout << "Cached crossover automation and block boundaries: passed.\n";
+    }
+
     // Bypass must return the time-aligned raw input, ignoring output trim and
     // limiter after the short smoothing transition; no unreported timing jump.
     {
