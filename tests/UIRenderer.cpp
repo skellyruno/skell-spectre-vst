@@ -97,7 +97,9 @@ int main(int argc, char** argv) {
         }
         // Contact sheet: 3 sizes, Basic and Expert. Preserve native pixels of small view.
         juce::Image sheet(juce::Image::RGB, 1760, 1485, true);
+        {
         juce::Graphics g(sheet);
+        g.fillAll(juce::Colour::fromRGB(15, 16, 23));
         for (int row=0; row<3; ++row) {
             const auto sz = sizes[static_cast<size_t>(row)];
             for (int col=0; col<2; ++col) {
@@ -116,6 +118,16 @@ int main(int argc, char** argv) {
                                       juce::RectanglePlacement::centred);
                 }
             }
+        }
+        } // Ensure JUCE graphics context flushes before checking pixels or saving.
+        const auto background = sheet.getPixelAt(0, 0);
+        int varied = 0;
+        for (int y=4; y<sheet.getHeight(); y+=19)
+            for (int x=4; x<sheet.getWidth(); x+=19)
+                varied += sheet.getPixelAt(x,y) != background;
+        if (varied < 100) {
+            std::fprintf(stderr,"Contact sheet is blank or nearly uniform\n");
+            ++failures;
         }
         if (!skellcore::ui::headless::writePng(sheet,folder.getChildFile("contact-sheet.png")))
             ++failures;
