@@ -75,8 +75,15 @@ int main(int argc, char** argv) {
                 if (auto* drive = processor.parameters.getParameter("drive"))
                     drive->setValueNotifyingHost(drive->convertTo0to1(45.0f));
             for (int i=0; i<editor.getNumChildComponents(); ++i)
-                if (auto* rail = dynamic_cast<BandRail*>(editor.getChildComponent(i)))
-                    rail->setSelection(id == "selected-880" ? 2 : 0);
+                if (auto* rail = dynamic_cast<BandRail*>(editor.getChildComponent(i))) {
+                    const int target = id == "selected-880" ? 2 : 0;
+                    // Exercise the real band-selection callback (including
+                    // Basic -> Expert mode and macro attachment rebinding).
+                    if (rail->getSelection() != target && rail->onSelect)
+                        rail->onSelect(target);
+                    else
+                        rail->setSelection(target);
+                }
         };
         options.inspect = [&] { return inspectLayout(editor); };
         options.mustDiffer = {
