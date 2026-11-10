@@ -13,6 +13,15 @@ void setBool(SkellSpectreAudioProcessor& processor, const juce::String& id, bool
     if (auto* p = processor.parameters.getParameter(id))
         p->setValueNotifyingHost(state ? 1.0f : 0.0f);
 }
+juce::TextButton* findButton(juce::Component& component, const juce::String& text) {
+    for (int i = 0; i < component.getNumChildComponents(); ++i) {
+        auto* child = component.getChildComponent(i);
+        if (auto* button = dynamic_cast<juce::TextButton*>(child))
+            if (button->getButtonText() == text) return button;
+        if (auto* nested = findButton(*child, text)) return nested;
+    }
+    return nullptr;
+}
 juce::StringArray inspectLayout(juce::Component& root) {
     juce::StringArray issues;
     for (int i = 0; i < root.getNumChildComponents(); ++i) {
@@ -56,7 +65,15 @@ int main(int argc, char** argv) {
             const bool expert = id.startsWith("expert-");
             editor.setDetailedView(expert);
             editor.selectComparisonSlot(id == "slot-b-880" ? 1 : 0);
-            setBool(processor, "bypass", id.contains("bypass"));
+            const bool bypass = id.contains("bypass");
+            setBool(processor, "bypass", bypass);
+            if (auto* power = findButton(editor, ""))
+                power->setToggleState(bypass, juce::dontSendNotification);
+            // A/B switching is synchronous. A visibly distinct B state also
+            // exercises the UI binding rather than only a selected tab label.
+            if (id == "slot-b-880")
+                if (auto* drive = processor.parameters.getParameter("drive"))
+                    drive->setValueNotifyingHost(drive->convertTo0to1(45.0f));
             for (int i=0; i<editor.getNumChildComponents(); ++i)
                 if (auto* rail = dynamic_cast<BandRail*>(editor.getChildComponent(i)))
                     rail->setSelection(id == "selected-880" ? 2 : 0);
