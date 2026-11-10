@@ -1,23 +1,23 @@
 {
-  "release": "1.8.2",
+  "release": "1.8.3",
   "sha256": {
     ".github/workflows/build.yml": "a33f9c90e5059b51c0d1ce69d41e13f6450101366d1de0c1e1150f297039e04e",
     ".gitignore": "604e05abfb94a0c88f2cad6e2f034948564dce7515cb03e7449f9dcc2dc939f4",
     "BUILD-FIXES.md": "ac444e5e9fcb5ffb8c2afb9c8f452494374de13fca51523a7a0a6d6bd9a221aa",
     "BUILD-WINDOWS.ps1": "02b6d64f3bc917f6224923be0a043a377184b3cc68914b62d9956720a8d486da",
-    "CHANGELOG.md": "f9306fca5716313edb87454cb18f3edbeeead672e55fd8979956609c365049a7",
-    "CMakeLists.txt": "872f04cdd5436a1fe0bb3f0dcf8afff1a2d169a8eb2a27ac2eb758b47977b00d",
-    "README.md": "29dbeea355aa1dc98e71756ba2500c62bba230b20bc581e8f9ab5e2b2da7363d",
-    "RELEASE-CHECKLIST.md": "8e0b8373387dd3bb6b162dc5c87437ab6d1e76d0d55179211bb37685867db4ac",
+    "CHANGELOG.md": "f63b48af8ecaa33d5fee08a09d481be3c7427a78a89064bebb616bc7f754ffd4",
+    "CMakeLists.txt": "ced2d17289d107d559f62c5e1c426cf082baf2b80a52d04e101f788b7354f569",
+    "README.md": "f3e94725c3ff65193630e8f178c1f07da30e69674ce35dc207f4a6012de5bc45",
+    "RELEASE-CHECKLIST.md": "8c39a47cbe834121b0c7d01f1133fbe8446295473100054f8d6adbea462eb67b",
     "Source/DSP.h": "6f93e946337a44004a093b3f190f0e2bca78a5853f47332616b5055701ead3d2",
     "Source/DriveOversampler.h": "e59a4423af6a0d05b2b68df55150c343a5c0d8f4f3b8165919e1844d2d0356ff",
-    "Source/PluginEditor.cpp": "58f876dda97f90d2df0260837d195fa6bda58a190cadb843a34244296295191c",
-    "Source/PluginEditor.h": "3696a24873e43f0ec7c308a43674627bf201ae563031f42cefd5dc668f0a0ee8",
+    "Source/PluginEditor.cpp": "0a4f75bbdbfd414270f8c40a83376b628305b34190fd5dfda7e42f7cfa92c804",
+    "Source/PluginEditor.h": "225ffdb3ca938475a772301a32445323015b3994706698eba9894576b760516b",
     "Source/PluginProcessor.cpp": "3eda5b8c3deaa63ff3df1b12c07610e5d9806b1cb2f3323e093ec51a3a5b41ff",
     "Source/PluginProcessor.h": "7ebc191b629fc55887d39bbea6aa12bb11b0a615fc1e74a56372cb8476e6749f",
     "docs/logo.svg": "4cb8cc78e92d8ae34f8aa4164f3444720b8eaacab908bce8114813554e03fcc9",
     "tests/DSPBenchmark.cpp": "1c57e7e7e6eb644496d6502d7339faaa3c8db1327959dc7fa199010a417ec145",
     "tests/DSPTests.cpp": "e63a5d0f52fe143a5c05a242aa87d20d2c7fdff8217cf9af6d88b16b94c3cb30",
-    "tests/UISmoke.cpp": "142c8bb1adfc9de5910d454c33f113cd5425b6e8a3f9ba0774c54571e237dfe0"
+    "tests/UISmoke.cpp": "f451eccf8ec403883158bcad4f2cdbc0fabc4cae4d0901dc1fce7f69effe93e0"
   }
 }

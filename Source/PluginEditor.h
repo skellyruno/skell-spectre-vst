@@ -81,6 +81,10 @@ public:
     ~SkellSpectreAudioProcessorEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
+    // Message-thread editor commands shared by UI buttons and offscreen tests.
+    // They intentionally do not depend on a running modal event loop.
+    void selectComparisonSlot(int index) { changeAB(index); }
+    void setDetailedView(bool expert) { showExpert(expert); }
 
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;

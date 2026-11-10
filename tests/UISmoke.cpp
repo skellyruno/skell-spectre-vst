@@ -31,12 +31,22 @@ static void setDrive(SkellSpectreAudioProcessor& processor, float value)
     parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
 }
 
-static void click(juce::Component& editor, const char* label)
+static void selectSlot(juce::Component& editor, int index)
 {
-    auto* b = findButton(editor, label);
-    check(b != nullptr, "missing A/B button");
-    b->triggerClick();
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(80);
+    auto* actual = dynamic_cast<SkellSpectreAudioProcessorEditor*>(&editor);
+    check(actual != nullptr, "incorrect JUCE editor type");
+    check(findButton(editor, index == 0 ? "A" : "B") != nullptr,
+          "A/B control missing from editor");
+    actual->selectComparisonSlot(index);
+}
+
+static void setExpert(juce::Component& editor)
+{
+    auto* actual = dynamic_cast<SkellSpectreAudioProcessorEditor*>(&editor);
+    check(actual != nullptr, "incorrect JUCE editor type");
+    check(findButton(editor, "BANDS") != nullptr,
+          "Expert view toggle missing from editor");
+    actual->setDetailedView(true);
 }
 
 static void screenshot(juce::Component& editor, int width, int height)
@@ -75,21 +85,21 @@ int main()
             screenshot(*editor, 880, 495);
             screenshot(*editor, 1440, 810);
             setDrive(processor, 22.5f);
-            click(*editor, "B");
+            selectSlot(*editor, 1);
             check(std::abs(processor.parameter("drive")) < .2f, "initial B slot did not load");
             setDrive(processor, 75.0f);
         }
         {
             std::unique_ptr<juce::AudioProcessorEditor> editor(processor.createEditor());
             check(std::abs(processor.parameter("drive") - 75.0f) < .2f, "active B lost on editor reopen");
-            click(*editor, "A");
+            selectSlot(*editor, 0);
             check(std::abs(processor.parameter("drive") - 22.5f) < .2f, "A slot lost on editor reopen");
-            click(*editor, "B");
+            selectSlot(*editor, 1);
             check(std::abs(processor.parameter("drive") - 75.0f) < .2f, "B slot lost on editor reopen");
             for (int i=0;i<8;++i)
             {
-                click(*editor, "A");
-                click(*editor, "B");
+                selectSlot(*editor, 0);
+                selectSlot(*editor, 1);
             }
             juce::MemoryBlock state;
             processor.getStateInformation(state);
@@ -103,9 +113,9 @@ int main()
             std::unique_ptr<juce::AudioProcessorEditor> editor(restored.createEditor());
             screenshot(*editor, 880, 495);
             check(std::abs(restored.parameter("drive") - 75.0f) < .2f, "host state did not restore B");
-            click(*editor, "A");
+            selectSlot(*editor, 0);
             check(std::abs(restored.parameter("drive") - 22.5f) < .2f, "host state did not restore A");
-            click(*editor, "BANDS");
+            setExpert(*editor);
             screenshot(*editor, 704, 396);
             screenshot(*editor, 880, 495);
             screenshot(*editor, 1440, 810);

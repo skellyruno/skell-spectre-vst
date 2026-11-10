@@ -1,5 +1,10 @@
 # Change log — SKELL SPECTRE
 
+## v1.8.3 — 2026-11-10
+
+- Share explicit A/B selection and detail-view commands between the UI button callbacks and the Windows editor smoke test.
+- Remove the smoke test's dependence on a modal message loop (`runDispatchLoopUntil`) unavailable in JUCE console-app builds; retain offscreen paint/layout and state-persistence checks.
+
 ## v1.8.2 — 2026-11-10
 
 - Build UI regression test with `juce_add_console_app` instead of plain `add_executable`, giving the target a generated JUCE sources directory as required by `juce_generate_juce_header`.

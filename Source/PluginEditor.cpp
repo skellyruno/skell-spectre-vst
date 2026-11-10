@@ -765,10 +765,10 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     comboAttachments.push_back(std::make_unique<ComboAttachment>(processor.parameters,"driveType",driveType));
     comboAttachments.push_back(std::make_unique<ComboAttachment>(processor.parameters,"widthType",widthType));
     splitStrip.onSelect=[this](int index) {setParam("slope",static_cast<float>(index));};
-    modeToggle.onClick=[this] {showExpert(!showingExpert);};
+    modeToggle.onClick=[this] {setDetailedView(!showingExpert);};
     modeToggle.setTooltip("Toggle multiband Expert editing / character view");
-    slotA.onClick=[this] {changeAB(0);};
-    slotB.onClick=[this] {changeAB(1);};
+    slotA.onClick=[this] {selectComparisonSlot(0);};
+    slotB.onClick=[this] {selectComparisonSlot(1);};
     copyAB.onClick=[this] {copyAToB();};
     copyAB.setTooltip("Copy slot A to slot B");
     footer.setText("SKELL SPECTRE // ORIGINAL FOUR-BAND REACTOR",juce::dontSendNotification);
