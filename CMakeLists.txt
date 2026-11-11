@@ -71,6 +71,7 @@ if(SKELL_BUILD_PLUGIN)
   if(WIN32 AND SKELL_BUILD_TESTS)
     juce_add_console_app(SkellUISmoke PRODUCT_NAME "Skell Spectre UI Smoke")
     target_sources(SkellUISmoke PRIVATE tests/UISmoke.cpp)
+    target_include_directories(SkellUISmoke PRIVATE "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
     # JUCE's generated compatibility header belongs to each CMake target.
     # Linking the plugin core alone does not export its private JuceHeader.h.
     target_link_libraries(SkellUISmoke PRIVATE SkellSpectre
@@ -86,12 +87,13 @@ if(SKELL_BUILD_PLUGIN)
   if(SKELL_BUILD_UI_RENDERER)
     FetchContent_Declare(SkellCoreDependency
       GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
-      GIT_TAG 438bc74a86a40bf54cfa8089832a477822c8ccda
+      GIT_TAG 3306ad495c93e062e39b8abbf079534b0b53da4e
       SOURCE_SUBDIR SkellCore)
     FetchContent_MakeAvailable(SkellCoreDependency)
     add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
     target_include_directories(SkellSpectreUIRenderer PRIVATE
-      "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode")
+      "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode"
+      "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
     target_link_libraries(SkellSpectreUIRenderer PRIVATE
       SkellSpectre SkellCore::UIRenderer
       juce::juce_audio_utils juce::juce_audio_processors
