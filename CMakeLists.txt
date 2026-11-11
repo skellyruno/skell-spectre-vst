@@ -27,6 +27,13 @@ if(SKELL_BUILD_PLUGIN)
     FetchContent_MakeAvailable(JUCE)
   endif()
 
+  # Header-only fetch: retain existing SkellSpectre DSP and JUCE targets.
+  FetchContent_Declare(SkellGuidedTourHeaders
+    GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
+    GIT_TAG 3306ad495c93e062e39b8abbf079534b0b53da4e
+    GIT_SHALLOW FALSE
+    SOURCE_SUBDIR _guided_tour_headers_only)
+  FetchContent_MakeAvailable(SkellGuidedTourHeaders)
   juce_add_plugin(SkellSpectre
     COMPANY_NAME "Skell Audio"
     BUNDLE_ID "audio.skell.spectre"
@@ -53,6 +60,7 @@ if(SKELL_BUILD_PLUGIN)
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0)
+  target_include_directories(SkellSpectre PRIVATE "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
   target_link_libraries(SkellSpectre PRIVATE
     juce::juce_audio_utils
     juce::juce_audio_processors
