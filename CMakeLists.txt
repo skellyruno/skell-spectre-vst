@@ -29,8 +29,8 @@ if(SKELL_BUILD_PLUGIN)
 
   # Header-only fetch: retain existing SkellSpectre DSP and JUCE targets.
   FetchContent_Declare(SkellGuidedTourHeaders
-    GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
-    GIT_TAG 3306ad495c93e062e39b8abbf079534b0b53da4e
+    GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
+    GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
     GIT_SHALLOW FALSE
     SOURCE_SUBDIR _guided_tour_headers_only)
   FetchContent_MakeAvailable(SkellGuidedTourHeaders)
@@ -86,8 +86,8 @@ if(SKELL_BUILD_PLUGIN)
   option(SKELL_BUILD_UI_RENDERER "Build SkellCore real JUCE editor screenshot executable" OFF)
   if(SKELL_BUILD_UI_RENDERER)
     FetchContent_Declare(SkellCoreDependency
-      GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
-      GIT_TAG 3306ad495c93e062e39b8abbf079534b0b53da4e
+      GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
+      GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
       SOURCE_SUBDIR SkellCore)
     FetchContent_MakeAvailable(SkellCoreDependency)
     add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
