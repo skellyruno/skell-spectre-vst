@@ -717,6 +717,9 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
             bandSwitches[b][j]=std::move(btn);
         }
     }
+    helpTour.setTooltip("Help / Show Tutorial");
+    helpTour.onClick=[this]{showGuidedTour(false);};
+    addAndMakeVisible(helpTour);
     for (auto* b:{&modeToggle,&prev,&next,&limiter,&autoGain,&hq,&power,&slotA,&slotB,&copyAB,&presetSave,&presetLoad})
         addAndMakeVisible(*b);
     for (auto* b:{&limiter,&autoGain,&hq,&power}) b->setClickingTogglesState(true);
@@ -785,6 +788,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     setResizeLimits(704,396,1440,810);
     setSize(880,495); // matches the supplied screenshot's compact default scale
     startTimerHz(20);
+    showGuidedTour(true);
 }
 
 SkellSpectreAudioProcessorEditor::~SkellSpectreAudioProcessorEditor()
@@ -799,6 +803,38 @@ SkellSpectreAudioProcessorEditor::~SkellSpectreAudioProcessorEditor()
     setLookAndFeel(nullptr);
 }
 
+void SkellSpectreAudioProcessorEditor::showGuidedTour(bool firstRun)
+{
+    std::vector<skellcore::ui::GuidedTourStep> steps;
+    steps.emplace_back(&preset,"START WITH A SOUND",
+        "Choose a factory preset, then make it your own.");
+    steps.emplace_back(&modeToggle,"CHARACTER OR BANDS",
+        "Switch between the quick character controls and Expert four-band editing.");
+    steps.emplace_back(&splitStrip,"BAND SLOPES",
+        "Shape how sharply the frequency bands are divided.");
+    if(!showingExpert && macro[0] && macro[0]->slider)
+    {
+        steps.emplace_back(macro[0]->slider.get(),"DRIVE CHARACTER",
+            "Start with Drive; the other macros shape punch, width and diffusion.");
+        steps.emplace_back(&rails[0],"SELECT A BAND",
+            "Choose ALL for a macro or A through D to focus on one band.");
+    }
+    else if(showingExpert && strips[0][0] && strips[0][0]->slider)
+    {
+        steps.emplace_back(strips[0][0]->slider.get(),"EDIT EACH BAND",
+            "Expert gives each frequency band its own independent character controls.");
+    }
+    steps.emplace_back(&slotA,"COMPARE A AND B",
+        "Store and compare different settings using the A and B controls.");
+    steps.emplace_back(&hq,"QUALITY MODE",
+        "HQ uses extra CPU and a few samples of delay for oversampled saturation.");
+    steps.emplace_back(&presetSave,"SAVE YOUR SOUND",
+        "Export your sound and press ? to replay this tutorial.");
+    guidedTour.setPalette({violet,panel,bone,subtle,juce::Colour(0xd9000000)});
+    guidedTour.setSteps(std::move(steps));
+    if(firstRun) guidedTour.startIfFirstRun();
+    else guidedTour.replay();
+}
 void SkellSpectreAudioProcessorEditor::changeMode(bool useBasic)
 {
     const bool old=processor.parameter("basic")>.5f;
@@ -1036,6 +1072,7 @@ void SkellSpectreAudioProcessorEditor::resized()
     slotB.setBounds(scaled(447,9,27,21,uiScale));
     copyAB.setBounds(scaled(419,33,55,18,uiScale));
     hq.setBounds(scaled(537,15,49,27,uiScale));
+    helpTour.setBounds(scaled(885,16,30,26,uiScale));
     limiter.setBounds(scaled(590,15,77,27,uiScale));
     autoGain.setBounds(scaled(671,15,92,27,uiScale));
     for(int k=0;k<3;++k)

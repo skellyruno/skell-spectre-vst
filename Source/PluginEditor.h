@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include <SkellCore/GuidedTour.h>
 #include <array>
 #include <functional>
 #include <memory>
@@ -85,6 +86,11 @@ public:
     // They intentionally do not depend on a running modal event loop.
     void selectComparisonSlot(int index) { changeAB(index); }
     void setDetailedView(bool expert) { showExpert(expert); }
+    void dismissGuidedTourForScreenshot() { guidedTour.dismiss(); }
+    bool showGuidedTourForScreenshot() {
+        showGuidedTour(false);
+        return guidedTour.isShowing();
+    }
 
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
@@ -129,6 +135,7 @@ private:
     std::array<Control*, 3> masters {}, crossover {};
     std::array<std::array<Control*, 6>, 4> strips {};
     std::array<std::array<std::unique_ptr<juce::TextButton>, 2>, 4> bandSwitches {};
+    juce::TextButton helpTour { "?" };
     juce::TextButton modeToggle { "MULTIBAND" };
     juce::TextButton prev { "<" }, next { ">" };
     juce::TextButton limiter { "LIMITER" }, autoGain { "AUTOGAIN" }, hq { "HQ" };
@@ -140,5 +147,7 @@ private:
     int currentAB = 0;
     bool showingExpert = false, previousBasic = true, rebindingMacro = false;
     float uiScale = 1.0f;
+    skellcore::ui::GuidedTourController guidedTour{*this,"skell-spectre-vst",1};
+    void showGuidedTour(bool firstRun);
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkellSpectreAudioProcessorEditor)
 };
