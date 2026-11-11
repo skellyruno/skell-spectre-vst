@@ -86,6 +86,11 @@ public:
     // They intentionally do not depend on a running modal event loop.
     void selectComparisonSlot(int index) { changeAB(index); }
     void setDetailedView(bool expert) { showExpert(expert); }
+    void dismissGuidedTourForScreenshot() { guidedTour.dismiss(); }
+    bool showGuidedTourForScreenshot() {
+        showGuidedTour(false);
+        return guidedTour.isShowing();
+    }
 
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
