@@ -510,7 +510,6 @@ SpectrumDisplay::SpectrumDisplay(SkellSpectreAudioProcessor& p) : processor(p)
             2.0f * skell::kPi * static_cast<float>(i) / static_cast<float>(fftSize - 1));
     setInterceptsMouseClicks(false, false);
     startTimerHz(20);
-    showGuidedTour(true);
 }
 
 void SpectrumDisplay::timerCallback()
@@ -789,6 +788,7 @@ SkellSpectreAudioProcessorEditor::SkellSpectreAudioProcessorEditor(SkellSpectreA
     setResizeLimits(704,396,1440,810);
     setSize(880,495); // matches the supplied screenshot's compact default scale
     startTimerHz(20);
+    showGuidedTour(true);
 }
 
 SkellSpectreAudioProcessorEditor::~SkellSpectreAudioProcessorEditor()
