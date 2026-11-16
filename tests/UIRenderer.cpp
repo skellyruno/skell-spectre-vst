@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
     int failures = 0;
     {
         SkellSpectreAudioProcessorEditor editor(processor);
+        editor.dismissGuidedTourForScreenshot();
         skellcore::ui::headless::Options options;
         options.project = "SKELL SPECTRE production JUCE editor";
         options.minimumColours = 12;
@@ -60,7 +61,9 @@ int main(int argc, char** argv) {
         options.scenes.push_back({"slot-b-880",880,495,0,0,false});
         options.scenes.push_back({"selected-880",880,495,0,0,false});
         options.scenes.push_back({"expert-bypass-704",704,396,0,1,false});
+        options.scenes.push_back({"tour-basic-704",704,396,0,4,false});
         options.configure = [&](const skellcore::ui::headless::Scene& scene) {
+            editor.dismissGuidedTourForScreenshot();
             const auto id = scene.id;
             const bool expert = id.startsWith("expert-");
             editor.setDetailedView(expert);
@@ -84,13 +87,18 @@ int main(int argc, char** argv) {
                     else
                         rail->setSelection(target);
                 }
+            if(id=="tour-basic-704" && !editor.showGuidedTourForScreenshot()){
+                std::fprintf(stderr,"Real Spectre GuidedTour failed to open\\n");
+                ++failures;
+            }
         };
         options.inspect = [&] { return inspectLayout(editor); };
         options.mustDiffer = {
             {"basic-880","expert-880"},
             {"basic-880","bypass-880"},
             {"basic-880","slot-b-880"},
-            {"basic-880","selected-880"}
+            {"basic-880","selected-880"},
+            {"basic-704","tour-basic-704"}
         };
         const juce::File folder = juce::File::getCurrentWorkingDirectory().getChildFile(path);
         const auto report = skellcore::ui::headless::render(editor, folder, options);
@@ -98,10 +106,11 @@ int main(int argc, char** argv) {
             std::fprintf(stderr,"Render: %s\n",error.toRawUTF8());
             ++failures;
         }
-        if (report.captured != 10) {
-            std::fprintf(stderr,"Expected 10 scenes, received %d\n",report.captured);
+        if (report.captured != 11) {
+            std::fprintf(stderr,"Expected 11 scenes, received %d\n",report.captured);
             ++failures;
         }
+        editor.dismissGuidedTourForScreenshot();
         // Contact sheet: 3 sizes, Basic and Expert. Preserve native pixels of small view.
         juce::Image sheet(juce::Image::RGB, 1760, 1485, true);
         {

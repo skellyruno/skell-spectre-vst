@@ -27,6 +27,13 @@ if(SKELL_BUILD_PLUGIN)
     FetchContent_MakeAvailable(JUCE)
   endif()
 
+  # Header-only fetch: retain existing SkellSpectre DSP and JUCE targets.
+  FetchContent_Declare(SkellGuidedTourHeaders
+    GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
+    GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
+    GIT_SHALLOW FALSE
+    SOURCE_SUBDIR _guided_tour_headers_only)
+  FetchContent_MakeAvailable(SkellGuidedTourHeaders)
   juce_add_plugin(SkellSpectre
     COMPANY_NAME "Skell Audio"
     BUNDLE_ID "audio.skell.spectre"
@@ -53,6 +60,7 @@ if(SKELL_BUILD_PLUGIN)
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0)
+  target_include_directories(SkellSpectre PRIVATE "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
   target_link_libraries(SkellSpectre PRIVATE
     juce::juce_audio_utils
     juce::juce_audio_processors
@@ -63,6 +71,7 @@ if(SKELL_BUILD_PLUGIN)
   if(WIN32 AND SKELL_BUILD_TESTS)
     juce_add_console_app(SkellUISmoke PRODUCT_NAME "Skell Spectre UI Smoke")
     target_sources(SkellUISmoke PRIVATE tests/UISmoke.cpp)
+    target_include_directories(SkellUISmoke PRIVATE "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
     # JUCE's generated compatibility header belongs to each CMake target.
     # Linking the plugin core alone does not export its private JuceHeader.h.
     target_link_libraries(SkellUISmoke PRIVATE SkellSpectre
@@ -77,13 +86,14 @@ if(SKELL_BUILD_PLUGIN)
   option(SKELL_BUILD_UI_RENDERER "Build SkellCore real JUCE editor screenshot executable" OFF)
   if(SKELL_BUILD_UI_RENDERER)
     FetchContent_Declare(SkellCoreDependency
-      GIT_REPOSITORY https://github.com/skellyruno/skell-vst-template.git
-      GIT_TAG 438bc74a86a40bf54cfa8089832a477822c8ccda
+      GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
+      GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
       SOURCE_SUBDIR SkellCore)
     FetchContent_MakeAvailable(SkellCoreDependency)
     add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
     target_include_directories(SkellSpectreUIRenderer PRIVATE
-      "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode")
+      "${CMAKE_CURRENT_BINARY_DIR}/SkellSpectre_artefacts/JuceLibraryCode"
+      "${skellguidedtourheaders_SOURCE_DIR}/SkellCore/include")
     target_link_libraries(SkellSpectreUIRenderer PRIVATE
       SkellSpectre SkellCore::UIRenderer
       juce::juce_audio_utils juce::juce_audio_processors
