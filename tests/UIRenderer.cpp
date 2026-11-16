@@ -62,10 +62,13 @@ int main(int argc, char** argv) {
         options.scenes.push_back({"selected-880",880,495,0,0,false});
         options.scenes.push_back({"expert-bypass-704",704,396,0,1,false});
         options.scenes.push_back({"tour-basic-704",704,396,0,4,false});
+        options.scenes.push_back({"tour-basic-880",880,495,0,4,false});
+        options.scenes.push_back({"tour-basic-1440",1440,810,0,4,false});
+        options.scenes.push_back({"tour-expert-880",880,495,0,4,false});
         options.configure = [&](const skellcore::ui::headless::Scene& scene) {
             editor.dismissGuidedTourForScreenshot();
             const auto id = scene.id;
-            const bool expert = id.startsWith("expert-");
+            const bool expert = id.startsWith("expert-") || id == "tour-expert-880";
             editor.setDetailedView(expert);
             editor.selectComparisonSlot(id == "slot-b-880" ? 1 : 0);
             const bool bypass = id.contains("bypass");
@@ -87,7 +90,7 @@ int main(int argc, char** argv) {
                     else
                         rail->setSelection(target);
                 }
-            if(id=="tour-basic-704" && !editor.showGuidedTourForScreenshot()){
+            if(id.startsWith("tour-") && !editor.showGuidedTourForScreenshot()){
                 std::fprintf(stderr,"Real Spectre GuidedTour failed to open\\n");
                 ++failures;
             }
@@ -98,7 +101,10 @@ int main(int argc, char** argv) {
             {"basic-880","bypass-880"},
             {"basic-880","slot-b-880"},
             {"basic-880","selected-880"},
-            {"basic-704","tour-basic-704"}
+            {"basic-704","tour-basic-704"},
+            {"basic-880","tour-basic-880"},
+            {"basic-1440","tour-basic-1440"},
+            {"expert-880","tour-expert-880"}
         };
         const juce::File folder = juce::File::getCurrentWorkingDirectory().getChildFile(path);
         const auto report = skellcore::ui::headless::render(editor, folder, options);
@@ -106,8 +112,8 @@ int main(int argc, char** argv) {
             std::fprintf(stderr,"Render: %s\n",error.toRawUTF8());
             ++failures;
         }
-        if (report.captured != 11) {
-            std::fprintf(stderr,"Expected 11 scenes, received %d\n",report.captured);
+        if (report.captured != 14) {
+            std::fprintf(stderr,"Expected 14 scenes, received %d\n",report.captured);
             ++failures;
         }
         editor.dismissGuidedTourForScreenshot();
