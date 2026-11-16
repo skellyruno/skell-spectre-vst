@@ -30,7 +30,7 @@ if(SKELL_BUILD_PLUGIN)
   # Header-only fetch: retain existing SkellSpectre DSP and JUCE targets.
   FetchContent_Declare(SkellGuidedTourHeaders
     GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
-    GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
+    GIT_TAG 1d537bc0d49703cd6bb0604eed161e5a067245c7
     GIT_SHALLOW FALSE
     SOURCE_SUBDIR _guided_tour_headers_only)
   FetchContent_MakeAvailable(SkellGuidedTourHeaders)
@@ -87,7 +87,7 @@ if(SKELL_BUILD_PLUGIN)
   if(SKELL_BUILD_UI_RENDERER)
     FetchContent_Declare(SkellCoreDependency
       GIT_REPOSITORY https://github.com/skellyruno/skellcore-vst-template.git
-      GIT_TAG 268cf6ba43e2a7fbb7e7b39bd3855663e00089f2
+      GIT_TAG 1d537bc0d49703cd6bb0604eed161e5a067245c7
       SOURCE_SUBDIR SkellCore)
     FetchContent_MakeAvailable(SkellCoreDependency)
     add_executable(SkellSpectreUIRenderer tests/UIRenderer.cpp)
