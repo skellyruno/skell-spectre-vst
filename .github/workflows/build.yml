@@ -3,7 +3,11 @@ on:
   workflow_dispatch:
   push:
     branches: [main, master]
+    tags: ['v*']
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   dsp-sanitizers:
@@ -38,20 +42,40 @@ jobs:
         run: cmake --build build --config Release --parallel 2
       - name: Run DSP regressions
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Package compiled VST3 bundle
+      - name: Test release packaging verifier
+        run: python -m unittest discover -s tests -p "test_release_packaging.py" -v
+      - name: Validate Windows VST3 with pluginval 1.0.4
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem -Path build/SkellSpectre_artefacts -Directory -Recurse -Filter '*.vst3' | Select-Object -First 1
-          if (-not $plugin) { throw 'SKELL SPECTRE .vst3 bundle missing' }
-          # Archive the actual .vst3 directory, not only its Contents folder.
-          Push-Location $plugin.Parent.FullName
-          try {
-            Compress-Archive -Path $plugin.Name -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'SKELL-SPECTRE-Windows-VST3.zip') -Force
-          }
-          finally { Pop-Location }
-      - name: Upload Windows VST3
+          $bundles = @(Get-ChildItem -Path build/SkellSpectre_artefacts -Directory -Recurse -Filter '*.vst3')
+          if ($bundles.Count -ne 1) { throw "Expected exactly one VST3 bundle, found $($bundles.Count)" }
+          $zip = Join-Path $env:RUNNER_TEMP 'pluginval_Windows.zip'
+          $pluginvalDir = Join-Path $env:RUNNER_TEMP 'pluginval'
+          $expectedHash = 'c08e61ce3b96db41636f8ec7e76f4c7e2c13ebdac7fa1b5a1f52b4f32ec715ab'
+          Invoke-WebRequest -Uri 'https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip' -OutFile $zip
+          $actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+          if ($actualHash -ne $expectedHash) { throw "pluginval archive SHA-256 mismatch: expected $expectedHash, got $actualHash" }
+          Expand-Archive -Path $zip -DestinationPath $pluginvalDir -Force
+          $pluginval = Get-ChildItem -Path $pluginvalDir -Recurse -File -Filter 'pluginval.exe' | Select-Object -First 1
+          if (-not $pluginval) { throw 'pluginval.exe missing from pinned v1.0.4 archive' }
+          & $pluginval.FullName --strictness-level 5 --validate-in-process --skip-gui-tests $bundles[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
+      - name: Stage and verify Windows VST3 preview
+        shell: pwsh
+        run: |
+          $packageArgs = @(
+            'tools/package_windows_vst3.py',
+            '--repo-root', $env:GITHUB_WORKSPACE,
+            '--build-root', 'build/SkellSpectre_artefacts',
+            '--output-dir', 'release-stage'
+          )
+          if ($env:GITHUB_REF -like 'refs/tags/v*') { $packageArgs += '--require-commercial-metadata' }
+          python @packageArgs
+          if ($LASTEXITCODE -ne 0) { throw "VST3 staging failed with exit code $LASTEXITCODE" }
+      - name: Upload verified Windows VST3 preview
         uses: actions/upload-artifact@v4
         with:
           name: SKELL-SPECTRE-Windows-VST3
-          path: SKELL-SPECTRE-Windows-VST3.zip
+          path: release-stage/**
           if-no-files-found: error
+          retention-days: 14
