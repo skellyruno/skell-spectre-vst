@@ -56,27 +56,11 @@ jobs:
           if ($env:GITHUB_REF -like 'refs/tags/v*') { $packageArgs += '--require-commercial-metadata' }
           python @packageArgs
           if ($LASTEXITCODE -ne 0) { throw "VST3 staging failed with exit code $LASTEXITCODE" }
-      - name: Validate Windows VST3 with pluginval 1.0.4
+      - name: Validate staged Windows VST3 with pluginval 1.0.4
         shell: pwsh
         run: |
           $bundles = @(Get-ChildItem -Path release-stage -Directory -Recurse -Filter '*.vst3')
-          if ($bundles.Count -ne 1) { throw "Expected exactly one VST3 bundle, found $($bundles.Count)" }
-          $zip = Join-Path $env:RUNNER_TEMP 'pluginval_Windows.zip'
-          $pluginvalDir = Join-Path $env:RUNNER_TEMP 'pluginval'
-          $expectedHash = 'c08e61ce3b96db41636f8ec7e76f4c7e2c13ebdac7fa1b5a1f52b4f32ec715ab'
-          Invoke-WebRequest -Uri 'https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip' -OutFile $zip
-          $actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
-          if ($actualHash -ne $expectedHash) { throw "pluginval archive SHA-256 mismatch: expected $expectedHash, got $actualHash" }
-          Expand-Archive -Path $zip -DestinationPath $pluginvalDir -Force
-          $pluginval = Get-ChildItem -Path $pluginvalDir -Recurse -File -Filter 'pluginval.exe' | Select-Object -First 1
-          if (-not $pluginval) { throw 'pluginval.exe missing from pinned v1.0.4 archive' }
-          & $pluginval.FullName --strictness-level 5 --validate-in-process --skip-gui-tests $bundles[0].FullName
-          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
-      - name: Validate Windows VST3 with pluginval 1.0.4
-        shell: pwsh
-        run: |
-          $bundles = @(Get-ChildItem -Path release-stage -Directory -Recurse -Filter '*.vst3')
-          if ($bundles.Count -ne 1) { throw "Expected exactly one VST3 bundle, found $($bundles.Count)" }
+          if ($bundles.Count -ne 1) { throw "Expected exactly one staged VST3 bundle, found $($bundles.Count)" }
           $zip = Join-Path $env:RUNNER_TEMP 'pluginval_Windows.zip'
           $pluginvalDir = Join-Path $env:RUNNER_TEMP 'pluginval'
           $expectedHash = 'c08e61ce3b96db41636f8ec7e76f4c7e2c13ebdac7fa1b5a1f52b4f32ec715ab'
