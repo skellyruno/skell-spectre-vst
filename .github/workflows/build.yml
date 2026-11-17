@@ -70,8 +70,12 @@ jobs:
           Expand-Archive -Path $zip -DestinationPath $pluginvalDir -Force
           $pluginval = Get-ChildItem -Path $pluginvalDir -Recurse -File -Filter 'pluginval.exe' | Select-Object -First 1
           if (-not $pluginval) { throw 'pluginval.exe missing from pinned v1.0.4 archive' }
-          & $pluginval.FullName --strictness-level 5 --validate-in-process --skip-gui-tests $bundles[0].FullName
-          if ($LASTEXITCODE -ne 0) { throw "pluginval failed with exit code $LASTEXITCODE" }
+          $pluginPath = $bundles[0].FullName
+          $arguments = '--strictness-level 5 --validate-in-process --skip-gui-tests "' + $pluginPath + '"'
+          $validation = Start-Process -FilePath $pluginval.FullName -ArgumentList $arguments -Wait -PassThru -NoNewWindow
+          if ($null -eq $validation.ExitCode -or $validation.ExitCode -ne 0) {
+            throw "pluginval failed with exit code $($validation.ExitCode)"
+          }
       - name: Upload verified Windows VST3 preview
         uses: actions/upload-artifact@v4
         with:
