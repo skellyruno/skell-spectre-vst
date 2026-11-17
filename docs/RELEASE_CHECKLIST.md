@@ -38,3 +38,13 @@ The packager allows a private preview but fails closed for version-tag builds un
 - [ ] Installer signing, private download access, update/rollback and website storefront coordination.
 
 The existing actual-editor screenshot workflow is separate from this release workflow. It must remain a required visual regression gate, but its captures do not replace the FL Studio checks above.
+
+
+## Portfolio coverage ledger entry
+
+- **Project:** SKELL SPECTRE 1.8.3.
+- **Selected:** 2026-11-17; first recorded selection in this release ledger (no earlier Release & Launch selection was found).
+- **Verified output:** baseline Windows VST3 artifact #14189522302 from successful run #43783047049; outer SHA-256 `70338f0428b51c6da9b6f7c966ef772e593cb7ee6ce9ceeab7c39ba5e79c3d60`; module SHA-256 `6f90e687a72e200e9abb2cc8a37098c5089fd706fa165677a76d9511de47395f`.
+- **Oldest blocker:** JUCE moduleinfo trailing commas; empty vendor URL/support email; missing LICENSE, THIRD_PARTY_NOTICES and EULA; no FL Studio acceptance.
+- **Next test:** exact-head Windows build and CTest, pinned pluginval 1.0.4, direct VST3 staging, checksum verification, then FL Studio/audio/state acceptance.
+- **Rotation note:** next Release & Launch run must choose a different non-DeEsser project after checking branch ownership.
