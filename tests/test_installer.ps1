@@ -229,6 +229,22 @@ try {
     Assert-Fails -Action { Invoke-TestInstaller -Package $tamperedPackage -Destination $tamperedDestination -BackupRoot (Join-Path $testRoot 'Tampered-Backups') } -Label 'tampered package checksum is rejected'
     Assert-Test -Condition (-not (Test-Path -LiteralPath $tamperedDestination)) -Label 'tampered package does not create an install directory'
 
+    $duplicatePackage = Join-Path $testRoot 'duplicate-package'
+    Copy-Item -LiteralPath $package -Destination $duplicatePackage -Recurse
+    Copy-Item -LiteralPath $tamperedBinary -Destination (Join-Path $duplicatePackage 'rogue.vst3')
+    Write-TestChecksums -Root $duplicatePackage
+    $duplicateDestination = Join-Path $testRoot 'Duplicate-VST3'
+    Assert-Fails -Action { Invoke-TestInstaller -Package $duplicatePackage -Destination $duplicateDestination -BackupRoot (Join-Path $testRoot 'Duplicate-Backups') } -Label 'extra VST3 module outside the bundle is rejected'
+    Assert-Test -Condition (-not (Test-Path -LiteralPath $duplicateDestination)) -Label 'duplicate-module package does not create an install directory'
+
+    $executablePackage = Join-Path $testRoot 'executable-package'
+    Copy-Item -LiteralPath $package -Destination $executablePackage -Recurse
+    [IO.File]::WriteAllBytes((Join-Path $executablePackage 'rogue.exe'), [byte[]](1, 2, 3))
+    Write-TestChecksums -Root $executablePackage
+    $executableDestination = Join-Path $testRoot 'Executable-VST3'
+    Assert-Fails -Action { Invoke-TestInstaller -Package $executablePackage -Destination $executableDestination -BackupRoot (Join-Path $testRoot 'Executable-Backups') } -Label 'unexpected executable in package is rejected'
+    Assert-Test -Condition (-not (Test-Path -LiteralPath $executableDestination)) -Label 'package with an executable does not create an install directory'
+
     $invalidDestination = Join-Path $testRoot 'Invalid-VST3'
     $null = New-Item -ItemType Directory -Path $invalidDestination -Force
     $invalidTarget = Join-Path $invalidDestination $script:BundleName

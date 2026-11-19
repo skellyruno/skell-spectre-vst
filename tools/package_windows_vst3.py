@@ -300,7 +300,7 @@ def package_preview(
         raise PackageError("staged package must contain exactly one VST3 bundle")
     forbidden = [
         path for path in output_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".exe", ".component", ".app"}
+        if path.is_file() and path.suffix.lower() in {".exe", ".zip", ".component", ".app"}
     ]
     if forbidden:
         raise PackageError("non-VST3 payload found in preview package: " + ", ".join(str(path) for path in forbidden))

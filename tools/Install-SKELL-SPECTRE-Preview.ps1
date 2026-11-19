@@ -280,9 +280,15 @@ function Test-PreviewPackage {
         throw 'Package must contain exactly one flat SKELL SPECTRE.vst3 bundle'
     }
     $bundle = $bundles[0].FullName
-    $forbidden = @(Get-ChildItem -LiteralPath $bundle -File -Recurse -Force |
+    $allModules = @(Get-ChildItem -LiteralPath $root -File -Recurse -Filter '*.vst3')
+    $expectedModule = Join-Path $bundle $script:BinaryRelative
+    if ($allModules.Count -ne 1 -or
+        -not [string]::Equals((Get-FullPath $allModules[0].FullName), (Get-FullPath $expectedModule), [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Preview package must contain exactly one VST3 module at the expected bundle path'
+    }
+    $forbidden = @(Get-ChildItem -LiteralPath $root -File -Recurse -Force |
         Where-Object { $_.Extension.ToLowerInvariant() -in @('.exe', '.zip', '.app', '.component') })
-    if ($forbidden.Count -ne 0) { throw 'VST3 bundle contains a forbidden executable or non-VST3 format' }
+    if ($forbidden.Count -ne 0) { throw 'Preview package contains a forbidden executable or non-VST3 format' }
 
     $identity = Read-ModuleIdentity -BundlePath $bundle
     $manifest = [IO.File]::ReadAllText((Join-Path $root 'BUILD-MANIFEST.json')) |
@@ -298,13 +304,15 @@ function Test-PreviewPackage {
         [string]$manifest.workflow_run_id -notmatch '^\d+$') {
         throw 'BUILD-MANIFEST.json is missing exact source/CI provenance'
     }
-    if ($manifest.binary_path -ne $identity.BinaryPath -or
+    if ([long]$manifest.binary_size_bytes -ne [long]$identity.BinarySize -or
+        $manifest.binary_path -ne $identity.BinaryPath -or
         $manifest.binary_sha256 -ne $identity.BinarySha256 -or
         $manifest.moduleinfo_path -ne $identity.ModuleInfoPath -or
         $manifest.moduleinfo_normalized_sha256 -ne $identity.ModuleInfoSha256) {
         throw 'BUILD-MANIFEST.json binary or moduleinfo identity/hash mismatch'
     }
     if ($manifest.architecture.machine -ne 'AMD64' -or
+        $manifest.architecture.machine_code -ne '0x8664' -or
         $manifest.architecture.optional_header -ne 'PE32+') {
         throw 'BUILD-MANIFEST.json does not confirm AMD64 PE32+ architecture'
     }
@@ -315,6 +323,14 @@ function Test-PreviewPackage {
     }
     if ($manifest.commercial_release_ready -eq $true) {
         throw 'Commercial-ready metadata is not accepted by this private-preview installer'
+    }
+    if ([string]$manifest.runtime_acceptance -notlike 'UNVERIFIED:*' -or
+        [string]$manifest.audio_acceptance -notlike 'UNVERIFIED:*' -or
+        @($manifest.commercial_release_blockers).Count -eq 0) {
+        throw 'Private-preview manifest must preserve explicit host/audio and commercial blockers'
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$manifest.ref_name)) {
+        throw 'BUILD-MANIFEST.json is missing its source ref name'
     }
 
     Test-ChecksumManifest -PackageRoot $root
@@ -434,7 +450,7 @@ function Invoke-InstallInternal {
             Assert-NoReparsePoints -Path $target
             $current = Test-InstalledBundle -BundlePath $target
             if ($current.TreeSha256 -eq $package.TreeSha256) {
-                Write-Host "Already installed: SKELL SPECTRE $($package.Version)"
+                Write-Output "Already installed: SKELL SPECTRE $($package.Version)"
                 return
             }
 
@@ -474,9 +490,9 @@ function Invoke-InstallInternal {
         if (Test-Path -LiteralPath $oldMove -PathType Container) {
             Remove-Item -LiteralPath $oldMove -Recurse -Force
         }
-        Write-Host "INSTALLED_VERSION=$($package.Version)"
-        Write-Host "INSTALL_PATH=$target"
-        if (-not [string]::IsNullOrWhiteSpace($backupPath)) { Write-Host "BACKUP_PATH=$backupPath" }
+        Write-Output "INSTALLED_VERSION=$($package.Version)"
+        Write-Output "INSTALL_PATH=$target"
+        if (-not [string]::IsNullOrWhiteSpace($backupPath)) { Write-Output "BACKUP_PATH=$backupPath" }
     } finally {
         if (Test-Path -LiteralPath $stageRoot) { Remove-Item -LiteralPath $stageRoot -Recurse -Force }
     }
@@ -517,9 +533,9 @@ function Invoke-RollbackInternal {
             forward_bundle = 'forward-current'
         }
         Write-JsonFile -Path (Join-Path $Plan.BackupPath 'rollback-manifest.json') -Value $rollbackState
-        Write-Host "ROLLED_BACK_VERSION=$($Plan.PreviousVersion)"
-        Write-Host "INSTALL_PATH=$($Plan.Target)"
-        Write-Host "ROLLBACK_FORWARD_PATH=$forwardBundle"
+        Write-Output "ROLLED_BACK_VERSION=$($Plan.PreviousVersion)"
+        Write-Output "INSTALL_PATH=$($Plan.Target)"
+        Write-Output "ROLLBACK_FORWARD_PATH=$forwardBundle"
     } finally {
         if (Test-Path -LiteralPath $stageRoot) { Remove-Item -LiteralPath $stageRoot -Recurse -Force }
     }
@@ -544,7 +560,7 @@ if (-not [string]::IsNullOrWhiteSpace($RollbackBackup)) {
     if ($PSCmdlet.ShouldProcess($plan.Target, "Restore verified SKELL SPECTRE $($plan.PreviousVersion)")) {
         Invoke-RollbackInternal -Plan $plan
     } else {
-        Write-Host 'Rollback validation passed. No files changed.'
+        Write-Output 'Rollback validation passed. No files changed.'
     }
 } else {
     if ([string]::IsNullOrWhiteSpace($PackageRoot)) { $PackageRoot = $PSScriptRoot }
@@ -554,6 +570,6 @@ if (-not [string]::IsNullOrWhiteSpace($RollbackBackup)) {
     if ($PSCmdlet.ShouldProcess($target, "Install validated SKELL SPECTRE $($package.Version) with verified backup/rollback")) {
         Invoke-InstallInternal -PackageRoot $PackageRoot -Destination $Destination -BackupRoot $BackupRoot
     } else {
-        Write-Host 'Package validation passed. No files changed.'
+        Write-Output 'Package validation passed. No files changed.'
     }
 }
