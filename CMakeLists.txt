@@ -3,7 +3,7 @@ project(SkellSpectre VERSION 1.8.3 LANGUAGES C CXX)
 
 # Retains the SKELL quickstart's JUCE_PATH override and pinned JUCE 8.0.12,
 # along with its unique manufacturer namespace and Windows VST3 workflow.
-option(SKELL_BUILD_PLUGIN "Build the JUCE VST3 and standalone application" ON)
+option(SKELL_BUILD_PLUGIN "Build the JUCE Windows VST3 plugin" ON)
 option(SKELL_BUILD_TESTS "Build the JUCE-free DSP regression/benchmark targets" ON)
 
 if(SKELL_BUILD_TESTS)
@@ -39,7 +39,7 @@ if(SKELL_BUILD_PLUGIN)
     BUNDLE_ID "audio.skell.spectre"
     PLUGIN_MANUFACTURER_CODE SkAu
     PLUGIN_CODE Spct
-    FORMATS VST3 Standalone
+    FORMATS VST3
     PRODUCT_NAME "SKELL SPECTRE"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE

@@ -45,6 +45,11 @@ def fixture(root: Path, trailing_commas=False):
         "cmake_minimum_required(VERSION 3.22)\nproject(SkellSpectre VERSION 1.8.3 LANGUAGES C CXX)\n",
         encoding="utf-8",
     )
+    (root / "tools").mkdir(parents=True, exist_ok=True)
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "tools" / "Install-SKELL-SPECTRE-Preview.ps1").write_text("# fixture installer\n", encoding="utf-8")
+    (root / "docs" / "WINDOWS-VST3-INSTALL.md").write_text("fixture install guide\n", encoding="utf-8")
+    (root / "THIRD_PARTY_NOTICES.txt").write_text("STATUS: INCOMPLETE\n", encoding="utf-8")
     bundle = root / "build" / "SkellSpectre_artefacts" / "Release" / BUNDLE_NAME
     (bundle / MODULEINFO_RELATIVE).parent.mkdir(parents=True, exist_ok=True)
     (bundle / BINARY_RELATIVE).parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +120,28 @@ class ReleasePackagingTests(unittest.TestCase):
             for line in (output / "SHA256SUMS.txt").read_text(encoding="utf-8").splitlines():
                 digest, relative = line.split("  ", 1)
                 self.assertEqual(hashlib.sha256((output / relative).read_bytes()).hexdigest(), digest)
+
+
+    def test_package_stages_installer_rights_documents_and_separate_provenance(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            build_root = fixture(root)
+            output = root / "release-stage"
+            source_commit = "a" * 40
+            ci_checkout_commit = "b" * 40
+            manifest = package_preview(
+                build_root, output, root, source_commit, "pull/4/merge", "12345",
+                ci_checkout_commit=ci_checkout_commit,
+            )
+            self.assertTrue((output / "Install-SKELL-SPECTRE-Preview.ps1").is_file())
+            self.assertTrue((output / "WINDOWS-VST3-INSTALL.md").is_file())
+            self.assertTrue((output / "THIRD_PARTY_NOTICES.txt").is_file())
+            self.assertEqual(manifest["source_commit"], source_commit)
+            self.assertEqual(manifest["ci_checkout_commit"], ci_checkout_commit)
+            self.assertEqual(manifest["pluginval"]["result"], "pending")
+            checksums = (output / "SHA256SUMS.txt").read_text(encoding="utf-8")
+            self.assertIn("Install-SKELL-SPECTRE-Preview.ps1", checksums)
+            self.assertIn("THIRD_PARTY_NOTICES.txt", checksums)
 
     def test_package_refuses_duplicate_bundles(self):
         with tempfile.TemporaryDirectory() as temp:
