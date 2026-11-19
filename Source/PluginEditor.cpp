@@ -1081,7 +1081,7 @@ void SkellSpectreAudioProcessorEditor::resized()
     modeToggle.setBounds(scaled(877,279,76,34,uiScale));
     presetSave.setBounds(scaled(873,371,80,31,uiScale));
     presetLoad.setBounds(scaled(873,408,80,31,uiScale));
-    modeToggle.setButtonText(showingExpert?"CHARACTER":"BANDS");
+    modeToggle.setButtonText(showingExpert?"CHAR":"BANDS");
     footer.setVisible(!showingExpert);
     footer.setBounds(scaled(408,520,454,17,uiScale));
     footer.setFont(juce::Font(juce::FontOptions(9.1f*uiScale)));
