@@ -192,8 +192,13 @@ try {
     $target = Join-Path $destination $script:BundleName
     Assert-Test -Condition ((Get-TestVersion -BundlePath $target) -eq '1.8.3') -Label 'fresh install places the expected VST3 version'
     $null = Invoke-TestInstaller -Package $package -Destination $destination -BackupRoot $backupRoot
-    $backupChildren = if (Test-Path -LiteralPath $backupRoot) { @(Get-ChildItem -LiteralPath $backupRoot -Directory) } else { @() }
-    Assert-Test -Condition ($backupChildren.Count -eq 0) -Label 'same-hash reinstall is idempotent and creates no backup'
+    # Keep the count scalar: assigning an if-statement's output can unwrap a one-item array.
+    # Measure-Object is stable for zero, one, or many backup directories.
+    $backupChildCount = 0
+    if (Test-Path -LiteralPath $backupRoot) {
+        $backupChildCount = (Get-ChildItem -LiteralPath $backupRoot -Directory | Measure-Object).Count
+    }
+    Assert-Test -Condition ($backupChildCount -eq 0) -Label 'same-hash reinstall is idempotent and creates no backup'
 
     Set-TestVersion -BundlePath $target -Version '1.8.2'
     $updateOutput = Invoke-TestInstaller -Package $package -Destination $destination -BackupRoot $backupRoot
