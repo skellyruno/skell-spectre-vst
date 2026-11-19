@@ -157,7 +157,11 @@ def validate_metadata(
 
 def validate_commercial_files(repo_root: Path) -> list[str]:
     required = ["LICENSE", "THIRD_PARTY_NOTICES.txt", "EULA.txt"]
-    return [f"commercial release requires {name}" for name in required if not (repo_root / name).is_file()]
+    errors = [f"commercial release requires {name}" for name in required if not (repo_root / name).is_file()]
+    notices = repo_root / "THIRD_PARTY_NOTICES.txt"
+    if notices.is_file() and "STATUS: COMPLETE" not in notices.read_text(encoding="utf-8"):
+        errors.append("THIRD_PARTY_NOTICES.txt must be reviewed and marked STATUS: COMPLETE")
+    return errors
 
 
 def validate_pe_x64(path: Path) -> dict[str, Any]:
@@ -201,6 +205,7 @@ def file_manifest(root: Path) -> list[dict[str, Any]]:
 def package_preview(
     build_root: Path, output_dir: Path, repo_root: Path, source_commit: str,
     ref_name: str, run_id: str, require_commercial_metadata: bool = False,
+    ci_checkout_commit: str = "local-unpinned",
 ) -> dict[str, Any]:
     bundle = find_bundle(build_root)
     source_moduleinfo = bundle / MODULEINFO_RELATIVE
@@ -236,6 +241,9 @@ def package_preview(
     missing_commercial_fields.extend(
         name for name in ("LICENSE", "THIRD_PARTY_NOTICES.txt", "EULA.txt") if not (repo_root / name).is_file()
     )
+    notices_path = repo_root / "THIRD_PARTY_NOTICES.txt"
+    if notices_path.is_file() and "STATUS: COMPLETE" not in notices_path.read_text(encoding="utf-8"):
+        missing_commercial_fields.append("third-party notices incomplete")
     manifest = {
         "product": PRODUCT_NAME,
         "vendor": VENDOR_NAME,
@@ -243,8 +251,10 @@ def package_preview(
         "package_type": "windows-x64-vst3-preview",
         "release_status": "PREVIEW_ONLY",
         "source_commit": source_commit,
+        "ci_checkout_commit": ci_checkout_commit,
         "ref_name": ref_name,
         "workflow_run_id": run_id,
+        "pluginval": {"version": "1.0.4", "strictness_level": 5, "result": "pending"},
         "platform": "Windows x64",
         "binary_path": (Path(BUNDLE_NAME) / BINARY_RELATIVE).as_posix(),
         "binary_size_bytes": staged_binary.stat().st_size,
@@ -266,10 +276,21 @@ def package_preview(
     (output_dir / "PREVIEW-ONLY.txt").write_text(
         "SKELL SPECTRE — PRIVATE WINDOWS VST3 PREVIEW\n\n"
         "This package is for private testing only. It is not a commercial release and must not be resold or redistributed.\n"
-        "No public release, code signing, installer, licence approval, vendor contact approval, or FL Studio runtime acceptance is implied.\n"
+        "No public release, code signing, commercial licence approval, vendor contact approval, or FL Studio runtime acceptance is implied.\n"
         "The included build manifest records the exact source commit and binary checksums.\n",
         encoding="utf-8",
     )
+    preview_resources = (
+        (Path("tools/Install-SKELL-SPECTRE-Preview.ps1"), "Install-SKELL-SPECTRE-Preview.ps1"),
+        (Path("docs/WINDOWS-VST3-INSTALL.md"), "WINDOWS-VST3-INSTALL.md"),
+        (Path("THIRD_PARTY_NOTICES.txt"), "THIRD_PARTY_NOTICES.txt"),
+    )
+    for source_relative, destination_name in preview_resources:
+        source_path = repo_root / source_relative
+        if not source_path.is_file():
+            raise PackageError(f"Missing private-preview package resource: {source_path}")
+        shutil.copy2(source_path, output_dir / destination_name)
+
     entries = file_manifest(output_dir)
     (output_dir / "SHA256SUMS.txt").write_text(
         "".join(f"{entry['sha256']}  {entry['path']}\n" for entry in entries), encoding="utf-8"
@@ -279,7 +300,7 @@ def package_preview(
         raise PackageError("staged package must contain exactly one VST3 bundle")
     forbidden = [
         path for path in output_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".exe", ".component", ".app"}
+        if path.is_file() and path.suffix.lower() in {".exe", ".zip", ".component", ".app"}
     ]
     if forbidden:
         raise PackageError("non-VST3 payload found in preview package: " + ", ".join(str(path) for path in forbidden))
@@ -296,6 +317,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-commit", default=None)
     parser.add_argument("--ref-name", default=None)
     parser.add_argument("--run-id", default=None)
+    parser.add_argument("--ci-checkout-commit", default=None)
     parser.add_argument("--require-commercial-metadata", action="store_true")
     args = parser.parse_args(argv)
     repo_root = args.repo_root.resolve()
@@ -308,6 +330,9 @@ def main(argv: list[str] | None = None) -> int:
             ref_name=args.ref_name or os.environ.get("GITHUB_REF_NAME", "local"),
             run_id=args.run_id or os.environ.get("GITHUB_RUN_ID", "local"),
             require_commercial_metadata=args.require_commercial_metadata,
+            ci_checkout_commit=args.ci_checkout_commit or os.environ.get(
+                "CI_CHECKOUT_COMMIT", os.environ.get("GITHUB_SHA", "local-unpinned")
+            ),
         )
     except (PackageError, OSError) as error:
         print(f"ERROR: {error}", file=sys.stderr)

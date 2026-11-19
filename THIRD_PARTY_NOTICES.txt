@@ -1,0 +1,7 @@
+STATUS: INCOMPLETE — NOT APPROVED FOR REDISTRIBUTION
+
+This file is a release blocker notice, not a completed third-party license inventory.
+
+Known build inputs include JUCE 8.0.12 and the pinned SkellCore / Guided Tour header source referenced by CMakeLists.txt. Their exact license obligations, notices, source-offer requirements (if any), and all bundled asset attributions still require a human-reviewed inventory for this product version.
+
+Do not remove this status or mark the inventory complete until every shipped dependency, font, icon, image, code sample, and other third-party asset has been reviewed and the required notices have been added. Do not redistribute or sell this preview.

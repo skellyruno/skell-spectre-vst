@@ -4,7 +4,7 @@ The v1.8.3 source is a development candidate, **not a verified commercial-ready 
 
 ## Must-pass build and host checks
 
-- [ ] Build both **VST3** and **Standalone** in Windows MSVC / Visual Studio 2026 with JUCE 8.0.12 and run all Release/Debug configurations. Fix any warnings, resource problems, or plugin scans.
+- [ ] Build the Windows x64 **VST3 only** in MSVC / Visual Studio 2026 with JUCE 8.0.12; no Standalone or macOS target is part of this release package. Run Release/Debug checks and fix warnings, resource problems, or plugin scans.
 - [ ] Run `pluginval` at strictness 5 (and higher if practical) on the compiled VST3. Test 1/2-channel processing, unusual host block sizes, duplicate instances, state save/restore and host bypass.
 - [ ] FL Studio: fresh scan, first load, project save/reopen, preset restore, undo/redo, freeze/render, automation playback, opening/closing UI repeatedly, closing project with UI open, deleting plugin, and 20+ simultaneous instances.
 - [ ] DAW sessions: compare bypass latency to dry channels; check automation of input/output, mix, crossovers, modes, HQ and band mute/solo. Ensure no clicks/dropouts when switching modes and presets.
@@ -21,7 +21,8 @@ The v1.8.3 source is a development candidate, **not a verified commercial-ready 
 - [ ] Validate host undo/redo around A/B snapshot changes in FL Studio.
 - [ ] A custom user-preset library/browser with favorite/tag/search features and safe atomic save operations across platforms.
 - [ ] Accessibility review (full focus traversal, UI contrast, accessible control descriptions).
-- [ ] Build/release automation for versioning, installer packaging, plugin signing and crash-symbol distribution.
+- [ ] Exact-head Windows VST3 build, DSP/UI tests, pluginval strictness 5, private-preview installer/update/rollback tests, and verified artifact provenance.
+- [ ] Build/release automation for commercial signing and crash-symbol distribution after licensing and contact gates are approved.
 - [ ] In-host CPU benchmarks of HQ × instances and GUI open/closed render load.
 
 ## v1.8.3 UI test fix
